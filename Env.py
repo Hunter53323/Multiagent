@@ -20,7 +20,9 @@ class Multiagent_energy(gym.Env):
         self.current_electricity_price = None
         self.current_gas_price = None
 
-        self.agents = []  #暂定用list实现
+        reward = 0
+
+        self.agents = []  
         self.users = []
         self.users.append(User(self.run_mode))
         if self.run_mode == "test":
@@ -68,10 +70,9 @@ class Multiagent_energy(gym.Env):
         #当前时刻前进到下一个时刻
         self.current_time_period += 1
         next_price = self._get_current_price()
-        
-        #当前价格更新
-        for obs in next_price:
-            self.observation[obs] = next_price[obs]
+        next_demand = self._getdemand()
+
+        self.observation = merge(next_price, next_demand, battery_electricity)
 
         return self.observation, reward, done, {}
     #测试模式下的该函数
@@ -101,7 +102,8 @@ class Multiagent_energy(gym.Env):
         return self.observation
     
     def render(self):
-        pass
+        for obs in self.observation:
+            print(obs+":", self.observation[obs])
 
     def close(self):
         pass
@@ -109,7 +111,11 @@ class Multiagent_energy(gym.Env):
 def merge(*dicts):
     res = {}
     for dic in dicts:
-        res = (**res, **dic)
+        res = {**res, **dic}
     #res = (**dict1, **dict2)
     return res
 
+if __name__ == "__main__":
+    bat = Multiagent_energy()
+    bat.reset()
+    bat.render()
