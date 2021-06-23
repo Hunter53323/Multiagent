@@ -5,29 +5,111 @@ import gym
 from gym import spaces, logger
 from gym.utils import seeding
 import numpy as np
-from Agent import Battery
+from Agent import Battery, User
 
 
 class Multiagent_energy(gym.Env):
 
     def __init__(self,mode = "test"):
-        self.battery_electricity = 0
+        self.run_mode = mode
+        #24个时间段的电价
         self.electricity_price_all = [0.3,0.3,0.3,0.3,0.3,0.3,0.3,1,1,1,1,0.6,0.6,0.6,0.6,0.6,1,1,1,1,0.6,0.6,0.6,0.3]
         self.gas_price_all = 0.3
 
-        self.agent = []  #暂定用list实现
-        if mode == "test":
+        self.current_time_period = 0
+        self.current_electricity_price = None
+        self.current_gas_price = None
+
+        self.agents = []  #暂定用list实现
+        self.users = []
+        self.users.append(User(self.run_mode))
+        if self.run_mode == "test":
             Agent = Battery()
-            self.agent.append(Agent)
+            self.agents.append(Agent)
+
+        self.observation = {}
+        #observation返回的参数数目
+        self.observation_dim_all = 6 
+        self.action_space_battery = self.agents[0].action_space
         
-    def step(self,action):
-        pass
+        
+        
+    def step(self,actions):
+        done = bool(
+            self.current_time_period >= 24
+        )
+        assert not done, "24个时刻已经运行结束，请重置环境！"
+        """
+        self.current_electricity_price = self.electricity_price_all[self.current_time_period]
+        self.current_gas_price = self.gas_price_all
+        current_price = self._get_current_price()
+        """
+        if self.run_mode == "test":
+            current_action = actions
+        battery_electricity, battery_charge_number, battery_reward = self.agent[0].step(current_action)
+        if battery_charge_number > 0:
+            #买电的消耗
+            buy_electricity_cost = -1 * self.observation['current_electricity_price'] * battery_charge_number
+        #成本，测试模式下
+        cost_all = buy_electricity_cost
+        
+        #用户满意度，测试模式下
+        satisfaction = self.users[0].judge_satisfaction(battery_charge_number, 0)
+
+        #惩罚
+        punish = battery_reward
+        earnings = 0
+        reward = self.calculate_reward(cost_all, satisfaction, earnings, punish)
+        """
+        for obs in self.observation:
+            if obs == ''
+        """
+
+        #当前时刻前进到下一个时刻
+        self.current_time_period += 1
+        next_price = self._get_current_price()
+        
+        #当前价格更新
+        for obs in next_price:
+            self.observation[obs] = next_price[obs]
+
+        return self.observation, reward, done, {}
+    #测试模式下的该函数
+    def _getdemand(self):
+        return self.users[0].generate_demand()
+
+    def calculate_reward(self, cost, satisfactory, earnings, punish):
+        return sum(cost, satisfactory, earnings, punish)
+
+    def _get_current_price(self):
+        self.current_electricity_price = self.electricity_price_all[self.current_time_period]
+        self.current_gas_price = self.gas_price_all
+        return {'current_electricity_price':self.current_electricity_price, 'current_gas_price':self.current_gas_price}
 
     def reset(self):
-        pass
+        #reset之后返回当前的状态
+        self.current_time_period = 0
+        
+        #需求：3
+        demand = self.users[0].reset()
+        #电池：1
+        battery_electricity = self.agents[0].reset()
+        #当前价格：2
+        current_price = self._get_current_price()
+        self.observation = merge(demand, battery_electricity,current_price)
+
+        return self.observation
     
     def render(self):
         pass
 
     def close(self):
         pass
+
+def merge(*dicts):
+    res = {}
+    for dic in dicts:
+        res = (**res, **dic)
+    #res = (**dict1, **dict2)
+    return res
+
