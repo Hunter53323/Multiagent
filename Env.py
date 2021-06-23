@@ -7,7 +7,6 @@ from gym.utils import seeding
 import numpy as np
 from Agent import Battery, User
 
-
 class Multiagent_energy(gym.Env):
 
     def __init__(self,mode = "test"):
@@ -33,14 +32,13 @@ class Multiagent_energy(gym.Env):
         #observation返回的参数数目
         self.observation_dim_all = 6 
         self.action_space_battery = self.agents[0].action_space
+
+        self.not_done = True
         
         
         
     def step(self,actions):
-        done = bool(
-            self.current_time_period >= 24
-        )
-        assert not done, "24个时刻已经运行结束，请重置环境！"
+        assert self.not_done, "24个时刻已经运行结束，请重置环境！"
         """
         self.current_electricity_price = self.electricity_price_all[self.current_time_period]
         self.current_gas_price = self.gas_price_all
@@ -48,10 +46,12 @@ class Multiagent_energy(gym.Env):
         """
         if self.run_mode == "test":
             current_action = actions
-        battery_electricity, battery_charge_number, battery_reward = self.agent[0].step(current_action)
+        battery_electricity, battery_charge_number, battery_reward = self.agents[0].step(current_action)
         if battery_charge_number > 0:
             #买电的消耗
             buy_electricity_cost = -1 * self.observation['current_electricity_price'] * battery_charge_number
+        else:
+            buy_electricity_cost = 0
         #成本，测试模式下
         cost_all = buy_electricity_cost
         
@@ -69,10 +69,21 @@ class Multiagent_energy(gym.Env):
 
         #当前时刻前进到下一个时刻
         self.current_time_period += 1
+        done = bool(
+            self.current_time_period >= 23
+        )
         next_price = self._get_current_price()
         next_demand = self._getdemand()
-
         self.observation = merge(next_price, next_demand, battery_electricity)
+        # if not done:
+        #     next_price = self._get_current_price()
+        #     next_demand = self._getdemand()
+        #     self.observation = merge(next_price, next_demand, battery_electricity)
+        # else:
+        #     self.observation = {}
+        #     self.not_done = False
+        if done:
+            self.not_done = False
 
         return self.observation, reward, done, {}
     #测试模式下的该函数
@@ -80,7 +91,7 @@ class Multiagent_energy(gym.Env):
         return self.users[0].generate_demand()
 
     def calculate_reward(self, cost, satisfactory, earnings, punish):
-        return sum(cost, satisfactory, earnings, punish)
+        return cost + satisfactory + earnings + punish
 
     def _get_current_price(self):
         self.current_electricity_price = self.electricity_price_all[self.current_time_period]
@@ -90,6 +101,7 @@ class Multiagent_energy(gym.Env):
     def reset(self):
         #reset之后返回当前的状态
         self.current_time_period = 0
+        self.not_done = True
         
         #需求：3
         demand = self.users[0].reset()
@@ -97,13 +109,15 @@ class Multiagent_energy(gym.Env):
         battery_electricity = self.agents[0].reset()
         #当前价格：2
         current_price = self._get_current_price()
-        self.observation = merge(demand, battery_electricity,current_price)
+        self.observation = merge(current_price, demand, battery_electricity)
 
         return self.observation
     
     def render(self):
         for obs in self.observation:
-            print(obs+":", self.observation[obs])
+            print(obs+":", self.observation[obs], end = ' ')
+        print("Time:", self.current_time_period, end = ' ')
+        print()
 
     def close(self):
         pass
@@ -116,6 +130,17 @@ def merge(*dicts):
     return res
 
 if __name__ == "__main__":
+    import random
     bat = Multiagent_energy()
     bat.reset()
     bat.render()
+    for i in range(15):
+        bat.step(random.randrange(21))
+        bat.render()
+    bat.reset()
+    print()
+    bat.render()
+    
+    while True:
+        bat.step(random.randrange(21))
+        bat.render()

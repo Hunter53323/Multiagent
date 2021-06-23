@@ -31,7 +31,7 @@ class Battery(BaseAgent):# TODO: 输出返回充放电多少，之后评价满�
         assert self.action_space.contains(action), err_msg
 
         charge_number = num_mapping(action)
-        self.electricity += charge_number
+        self.electricity = round(self.electricity + charge_number,2)
         #电量约束,超出约束则给予惩罚
         if (self.electricity > self.max_electricity) \
             or (self.electricity < self.min_electricity):
@@ -39,10 +39,11 @@ class Battery(BaseAgent):# TODO: 输出返回充放电多少，之后评价满�
         else:
             reward = 0
 
-        return self.electricity, self.charge_number, reward
+        battery_electricity = {'battery_electricity':self.electricity}
+        return battery_electricity, charge_number, reward
 
     def reset(self):
-        self.electricity = 1
+        self.electricity = 1.0
 
         battery_electricity = {'battery_electricity':self.electricity}
         return battery_electricity
@@ -114,7 +115,7 @@ def random_demand(sup):
 if __name__ == "__main__":
     battery = Battery()
     action = random.randrange(21)
-    elec, reward = battery.step(action)
+    elec, charge, reward = battery.step(action)
     print("动作：",action)
     print("电池电量：", elec)
     print("奖励：",reward)
