@@ -30,8 +30,13 @@ class Multiagent_energy(gym.Env):
 
         self.observation = {}
         #observation返回的参数数目
-        self.observation_dim_all = 6 
-        self.action_space_battery = self.agents[0].action_space
+        
+        # self.action_space_battery = self.agents[0].action_space
+        self.action_space = {}
+        self.action_space['battery'] = self.agents[0].action_space
+        #取得维数使用action_sapce.n
+
+        
 
         self.not_done = True
         

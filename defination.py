@@ -12,3 +12,5 @@ obs_other = []
 OBSERVATION_BATTERY = OBSERVATION[obs_battery]
 OBSERVATION_OTHER = []
 
+def dict_to_list(dic):
+    return np.array([value for value in dic.values()])

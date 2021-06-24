@@ -46,10 +46,29 @@ class Critic(nn.Module):
     def shut_down_grad(self):
         self.requires_grad_ = False
 
-class DDPG_own(object):
-    pass
+class MADDPG(DDPG):
+    def __init__(self, a_dims, s_dims, *agents):
+        s_dim_all = len(defination.OBSERVATION)
+        self.DDPGs = [DDPG(a_dims[agent], s_dims[agent], s_dim_all, agent) for agent in agents]
+
+    def choose_action(self, obs):
+        actions = []
+        for agent in self.DDPGs:
+            if agent.name == "battery":
+                sub_obs = {key: value for key, value in obs.items() if key in defination.OBSERVATION_BATTERY}
+            else:
+                raise Exception("其他智能体的部分还没有完成！")
+            actions.append(agent.choose_action(sub_obs))
+        return actions
+
+    def store_transition(self, s_critic, a, r, s__critic):
+        return super().store_transition(s_critic, a, r, s__critic)
+
+    def learn(self):
+        return super().learn()
+
 class DDPG(object):
-    def __init__(self, a_dim, s_dim, s_dim_critic):
+    def __init__(self, a_dim, s_dim, s_dim_critic, name):
         self.a_dim, self.s_dim, self.s_dim_critic = a_dim, s_dim, s_dim_critic
         self.memory = np.zeros((MEMORY_CAPACITY, 2*s_dim + 2*s_dim_critic + a_dim + 1), dtype=np.float32)
         self.pointer = 0 # serves as updating the memory data 
@@ -63,19 +82,30 @@ class DDPG(object):
         self.critic_optimizer = torch.optim.Adam(self.critic_eval.parameters(), lr=LR_CRITIC)
         # Define the loss function for critic network update
         self.loss_func = nn.MSELoss()
+        self.name = name
 
-    def formatting(self, agent_mode, s_critic, s__critic):
-        if agent_mode == "battery":
+    def formatting(self, s_critic, s__critic):
+        if self.name == "battery":
             s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION_BATTERY}
             s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION_BATTERY}
         else:
             raise Exception("请正确使用格式化函数！")
 
-    def store_transition(self, s_critic, a, r, s__critic, agent_mode): # how to store the episodic data to buffer
+        return s, s_
+
+    def store_transition(self, s_critic, a, r, s__critic): # how to store the episodic data to buffer
         """
         储存当前的observation
         """
-        s , s_ = self.formatting(agent_mode, s_critic, s__critic)
+        #提取对应智能体的数据
+        s , s_ = self.formatting(s_critic, s__critic)
+        #数据转化为列表
+        s = defination.dict_to_list(s)
+        s_ = defination.dict_to_list(s_)
+        a = defination.dict_to_list(a)
+        s_critic = defination.dict_to_list(s_critic)
+        s__critic = defination.dict_to_list(s__critic)
+
         transition = np.hstack((s, s_critic, a, [r], s_, s__critic))
         index = self.pointer % MEMORY_CAPACITY # replace the old data with new data 
         self.memory[index, :] = transition

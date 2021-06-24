@@ -18,7 +18,7 @@ def main():
     a_bound = env.action_space.high
     a_low_bound = env.action_space.low
 
-    ddpg = DDPG(a_dim, s_dim, a_bound)
+    ddpg = DDPG(a_dim, s_dim, s_dim_critic)
     var = 3 # the controller of exploration which will decay during training process
     t1 = time.time()
     for i in range(EPISODES):
@@ -30,6 +30,7 @@ def main():
             a = ddpg.choose_action(s)
             a = np.clip(np.random.normal(a, var), a_low_bound, a_bound)
             s_, r, done, info = env.step(a)
+            #store按照修改过的格式进行使用
             ddpg.store_transition(s, a, r / 10, s_) # store the transition to memory
             
             if ddpg.pointer > MEMORY_CAPACITY:
