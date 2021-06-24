@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import defination
 
 LR_ACTOR = 0.001
 LR_CRITIC = 0.002
@@ -12,15 +13,14 @@ TAU = 0.01
 MEMORY_CAPACITY = 10000
 BATCH_SIZE = 32
 
-
 class Actor(nn.Module):
     def __init__(self, s_dim, a_dim):
-        super(ActorNet, self).__init__()
+        super(Actor, self).__init__()
         self.fc1 = nn.Linear(s_dim, 30)
         self.fc1.weight.data.normal_(0, 0.1) # initialization of FC1
         self.out = nn.Linear(30, a_dim)
         self.out.weight.data.normal_(0, 0.1) # initilizaiton of OUT
-    def forward(self, x):
+    def choose_action(self, x):
         x = self.fc1(x)
         x = F.relu(x)
         x = self.out(x)
@@ -30,42 +30,58 @@ class Actor(nn.Module):
 
 class Critic(nn.Module):
     def __init__(self, s_dim, a_dim):
-        super(CriticNet, self).__init__()
+        super(Critic, self).__init__()
         self.fcs = nn.Linear(s_dim, 30)
         self.fcs.weight.data.normal_(0, 0.1)
         self.fca = nn.Linear(a_dim, 30)
         self.fca.weight.data.normal_(0, 0.1)
         self.out = nn.Linear(30, 1)
         self.out.weight.data.normal_(0, 0.1)
-    def forward(self, s, a):
+    def value_of_action(self, s, a):
         x = self.fcs(s)
         y = self.fca(a)
         actions_value = self.out(F.relu(x+y))
         return actions_value
 
+    def shut_down_grad(self):
+        self.requires_grad_ = False
+
+class DDPG_own(object):
+    pass
 class DDPG(object):
-    def __init__(self, a_dim, s_dim, a_bound):
-        self.a_dim, self.s_dim, self.a_bound = a_dim, s_dim, a_bound
-        self.memory = np.zeros((MEMORY_CAPACITY, s_dim * 2 + a_dim + 1), dtype=np.float32)
+    def __init__(self, a_dim, s_dim, s_dim_critic):
+        self.a_dim, self.s_dim, self.s_dim_critic = a_dim, s_dim, s_dim_critic
+        self.memory = np.zeros((MEMORY_CAPACITY, 2*s_dim + 2*s_dim_critic + a_dim + 1), dtype=np.float32)
         self.pointer = 0 # serves as updating the memory data 
         # Create the 4 network objects
-        self.actor_eval = ActorNet(s_dim, a_dim)
-        self.actor_target = ActorNet(s_dim, a_dim)
-        self.critic_eval = CriticNet(s_dim, a_dim)
-        self.critic_target = CriticNet(s_dim, a_dim)
+        self.actor_eval = Actor(s_dim, a_dim)
+        self.actor_target = Actor(s_dim, a_dim)
+        self.critic_eval = Critic(s_dim_critic, a_dim)
+        self.critic_target = Critic(s_dim_critic, a_dim)
         # create 2 optimizers for actor and critic
         self.actor_optimizer = torch.optim.Adam(self.actor_eval.parameters(), lr=LR_ACTOR)
         self.critic_optimizer = torch.optim.Adam(self.critic_eval.parameters(), lr=LR_CRITIC)
         # Define the loss function for critic network update
         self.loss_func = nn.MSELoss()
-    def store_transition(self, s, a, r, s_): # how to store the episodic data to buffer
-        transition = np.hstack((s, a, [r], s_))
+
+    def formatting(self, agent_mode, s_critic, s__critic):
+        if agent_mode == "battery":
+            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION_BATTERY}
+            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION_BATTERY}
+        else:
+            raise Exception("请正确使用格式化函数！")
+
+    def store_transition(self, s_critic, a, r, s__critic, agent_mode): # how to store the episodic data to buffer
+        """
+        储存当前的observation
+        """
+        s , s_ = self.formatting(agent_mode, s_critic, s__critic)
+        transition = np.hstack((s, s_critic, a, [r], s_, s__critic))
         index = self.pointer % MEMORY_CAPACITY # replace the old data with new data 
         self.memory[index, :] = transition
         self.pointer += 1
     
     def choose_action(self, s):
-        # print(s)
         s = torch.unsqueeze(torch.FloatTensor(s), 0)
         return self.actor_eval(s)[0].detach()
     
@@ -82,12 +98,15 @@ class DDPG(object):
         batch_trans = self.memory[indices, :]
         # extract data from mini-batch of transitions including s, a, r, s_
         batch_s = torch.FloatTensor(batch_trans[:, :self.s_dim])
-        batch_a = torch.FloatTensor(batch_trans[:, self.s_dim:self.s_dim + self.a_dim])
-        batch_r = torch.FloatTensor(batch_trans[:, -self.s_dim - 1: -self.s_dim])
-        batch_s_ = torch.FloatTensor(batch_trans[:, -self.s_dim:])
+        batch_s_critic = torch.FloatTensor(batch_trans[:, self.s_dim : self.s_dim + self.s_dim_critic])
+        batch_a = torch.FloatTensor(batch_trans[:, self.s_dim + self.s_dim_critic : self.s_dim + self.s_dim_critic + self.a_dim])
+        batch_r = torch.FloatTensor(batch_trans[:, self.s_dim + self.s_dim_critic + self.a_dim : self.s_dim + self.s_dim_critic + self.a_dim + 1])
+        batch_s_ = torch.FloatTensor(batch_trans[:, -self.s_dim_critic - self.s_dim:])
+        batch_s__critic = torch.FloatTensor(batch_trans[:, -self.s_dim_critic:])
+        
         # make action and evaluate its action values
-        a = self.actor_eval(batch_s)
-        q = self.critic_eval(batch_s, a)
+        a = self.actor_eval.choose_action(batch_s)
+        q = self.critic_eval.value_of_action(batch_s_critic, a)
         actor_loss = -torch.mean(q)
         # optimize the loss of actor network
         self.actor_optimizer.zero_grad()
@@ -95,11 +114,11 @@ class DDPG(object):
         self.actor_optimizer.step()
         
         # compute the target Q value using the information of next state
-        a_target = self.actor_target(batch_s_)
-        q_tmp = self.critic_target(batch_s_, a_target)
+        a_target = self.actor_target.choose_action(batch_s_)
+        q_tmp = self.critic_target.value_of_action(batch_s__critic, a_target)
         q_target = batch_r + GAMMA * q_tmp
         # compute the current q value and the loss
-        q_eval = self.critic_eval(batch_s, batch_a)
+        q_eval = self.critic_eval.value_of_action(batch_s_critic, batch_a)
         td_error = self.loss_func(q_target, q_eval)
         # optimize the loss of critic network
         self.critic_optimizer.zero_grad()
