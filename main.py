@@ -5,7 +5,7 @@ from RLpolicy import MADDPG
 import time
 import numpy as np
 
-EPISODES = 20000
+EPISODES = 500
 EP_STEPS = 23
 RENDER = False
 
@@ -42,7 +42,7 @@ def main():
         s = env.reset()
         ep_r = 0
         for j in range(EP_STEPS):
-            if RENDER and i>100 : env.render()
+            if RENDER and i>300 : env.render()
             # add explorative noise to action
             a = ddpg.choose_action(s)
             for key, value in a.items():

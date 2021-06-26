@@ -10,12 +10,13 @@ LR_ACTOR = 0.001
 LR_CRITIC = 0.002
 GAMMA = 0.9
 TAU = 0.01
-MEMORY_CAPACITY = 1000 
+MEMORY_CAPACITY = 3000
 # MEMORY_CAPACITY = 10000
-BATCH_SIZE = 32
+BATCH_SIZE = 1   #暂时应该给的小一点
 
 
 #TODO:Actor需要调整成整数输出
+#隐藏层维数为300时收敛会快很多
 class Actor(nn.Module):
     def __init__(self, s_dim, a_dim):
         super(Actor, self).__init__()
@@ -176,6 +177,7 @@ class DDPG(object):
         # make action and evaluate its action values
         a = self.actor_eval(batch_s)
         q = self.critic_eval(batch_s_critic, a)
+        #动作误差的正负#TODO:
         actor_loss = -torch.mean(q)
         # optimize the loss of actor network
         self.actor_optimizer.zero_grad()

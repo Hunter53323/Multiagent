@@ -6,7 +6,7 @@ import gym
 import time
 
 #####################  hyper parameters  ####################
-EPISODES = 200
+EPISODES = 2000
 EP_STEPS = 200
 LR_ACTOR = 0.001
 LR_CRITIC = 0.002
@@ -130,7 +130,7 @@ for i in range(EPISODES):
     s = env.reset()
     ep_r = 0
     for j in range(EP_STEPS):
-        if RENDER: env.render()
+        if RENDER : env.render()
         # add explorative noise to action
         a = ddpg.choose_action(s)
         a = np.clip(np.random.normal(a, var), a_low_bound, a_bound)

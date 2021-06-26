@@ -98,6 +98,7 @@ class Multiagent_energy(gym.Env):
 
     def calculate_reward(self, cost, satisfactory, earnings, punish):
         return cost + satisfactory + earnings + punish
+        # return cost
 
     def _get_current_price(self):
         self.current_electricity_price = self.electricity_price_all[self.current_time_period]
