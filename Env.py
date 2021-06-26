@@ -36,11 +36,14 @@ class Multiagent_energy(gym.Env):
         self.action_space['battery'] = self.agents[0].action_space
         #取得维数使用action_sapce.n
 
+        self.observation_space = {}
+        self.observation_space['battery'] = self.agents[0].observation_space.n
         
-
         self.not_done = True
         
-        
+    def get_agent_names(self):
+        return [ag.name for ag in self.agents]
+
         
     def step(self,actions):
         assert self.not_done, "24个时刻已经运行结束，请重置环境！"
@@ -49,9 +52,12 @@ class Multiagent_energy(gym.Env):
         self.current_gas_price = self.gas_price_all
         current_price = self._get_current_price()
         """
-        if self.run_mode == "test":
-            current_action = actions
-        battery_electricity, battery_charge_number, battery_reward = self.agents[0].step(current_action)
+        for key, value in actions.items():
+            if key == "battery":
+                battery_electricity, battery_charge_number, battery_reward = self.agents[0].step(value)
+            else:
+                raise Exception("其他智能体还没有完成！")
+
         if battery_charge_number > 0:
             #买电的消耗
             buy_electricity_cost = -1 * self.observation['current_electricity_price'] * battery_charge_number
@@ -131,7 +137,6 @@ def merge(*dicts):
     res = {}
     for dic in dicts:
         res = {**res, **dic}
-    #res = (**dict1, **dict2)
     return res
 
 if __name__ == "__main__":
@@ -139,6 +144,9 @@ if __name__ == "__main__":
     bat = Multiagent_energy()
     bat.reset()
     bat.render()
+    print(bat.action_space)
+    print(bat.observation_space)
+    """
     for i in range(15):
         bat.step(random.randrange(21))
         bat.render()
@@ -149,3 +157,4 @@ if __name__ == "__main__":
     while True:
         bat.step(random.randrange(21))
         bat.render()
+    """

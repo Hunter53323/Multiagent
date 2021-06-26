@@ -1,7 +1,8 @@
 from gym import spaces
 import random
+import numpy as np
 class BaseAgent():
-    def __init__(self, mode = "Mix"):
+    def __init__(self, mode = "", name = None):
         if mode == "Mix":
             self.electricity = 0
             self.gas = 0
@@ -9,16 +10,22 @@ class BaseAgent():
             self.electricity = 0
         elif mode == "Gas":
             self.gas = 0
+        else:
+            pass
+        
+        self.name = name
+
 
         
-class Battery(BaseAgent):# TODO: 输出返回充放电多少，之后评价满意度
+class Battery(BaseAgent):
     def __init__(self):
-        super().__init__(mode="Elec")
+        super().__init__(mode="Elec", name = "battery")
         self.electricity = 1
         #动作空间从放电百分之十到充电百分之十
         self.action_space = spaces.Discrete(21)
-        #当前电量状态为满电的百分比
-        self.observation_space = spaces.Discrete(101)
+        #当前电量状态为满电的百分比,一维
+        #该智能体能观测到的观测空间为当前电价、自己的电量、用户需求
+        self.observation_space = spaces.Discrete(3)
 
         #常数定义
         self.max_electricity = 10
@@ -26,7 +33,9 @@ class Battery(BaseAgent):# TODO: 输出返回充放电多少，之后评价满�
         self.charge_discharge_max = 10
         self.eta = 0.98
 
+
     def step(self, action):
+        action = np.argmax(action)
         err_msg = "%r (%s) invalid" % (action, type(action))
         assert self.action_space.contains(action), err_msg
 
@@ -47,14 +56,14 @@ class Battery(BaseAgent):# TODO: 输出返回充放电多少，之后评价满�
 
         battery_electricity = {'battery_electricity':self.electricity}
         return battery_electricity
-        #return self.electricity
 
     def render(self):
         #环境的render模块里面调用输出相应的数据
         pass
 
-class User():
+class User(BaseAgent):
     def __init__(self, mode = "test"):
+        super().__init__(name = "user")
         self.satisfaction = None
         self.electricity_demand = None
         self.gas_demand = None
