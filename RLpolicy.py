@@ -10,8 +10,8 @@ LR_ACTOR = 0.001
 LR_CRITIC = 0.002
 GAMMA = 0.9
 TAU = 0.01
-# MEMORY_CAPACITY = 10 
-MEMORY_CAPACITY = 10000
+MEMORY_CAPACITY = 1000 
+# MEMORY_CAPACITY = 10000
 BATCH_SIZE = 32
 
 
@@ -54,6 +54,7 @@ class Actor(nn.Module):
         return x #type:tensor([k])
 
 class Critic(nn.Module):
+    #TODO: 这里的动作维数具体定义
     def __init__(self, s_dim, a_dim):
         super(Critic, self).__init__()
         self.fcs = nn.Linear(s_dim, 30)

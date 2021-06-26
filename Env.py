@@ -19,8 +19,6 @@ class Multiagent_energy(gym.Env):
         self.current_electricity_price = None
         self.current_gas_price = None
 
-        reward = 0
-
         self.agents = []  
         self.users = []
         self.users.append(User(self.run_mode))
@@ -65,6 +63,7 @@ class Multiagent_energy(gym.Env):
             buy_electricity_cost = 0
         #成本，测试模式下
         cost_all = buy_electricity_cost
+        #TODO: 用户买电的成本
         
         #用户满意度，测试模式下
         satisfaction = self.users[0].judge_satisfaction(battery_charge_number, 0)
@@ -73,10 +72,6 @@ class Multiagent_energy(gym.Env):
         punish = battery_reward
         earnings = 0
         reward = self.calculate_reward(cost_all, satisfaction, earnings, punish)
-        """
-        for obs in self.observation:
-            if obs == ''
-        """
 
         #当前时刻前进到下一个时刻
         self.current_time_period += 1
@@ -134,6 +129,9 @@ class Multiagent_energy(gym.Env):
         pass
 
 def merge(*dicts):
+    """
+    多个字典合成一个字典
+    """
     res = {}
     for dic in dicts:
         res = {**res, **dic}

@@ -17,8 +17,9 @@ def normal_discrete(mean, var, action_space, low, high):
     continue_number = np.random.normal(mean, var)
     min_number_list = abs(action_space - continue_number)
     random_action = np.clip(np.argmin(min_number_list), low, high)
-    action_space[random_action] = 1
-    return action_space
+    action_list = np.zeros(len(action_space))
+    action_list[random_action] = 1
+    return action_list
 
 def main():
     env = Env.Multiagent_energy(mode = "test")
@@ -41,7 +42,7 @@ def main():
         s = env.reset()
         ep_r = 0
         for j in range(EP_STEPS):
-            if RENDER : env.render()
+            if RENDER and i>100 : env.render()
             # add explorative noise to action
             a = ddpg.choose_action(s)
             for key, value in a.items():
