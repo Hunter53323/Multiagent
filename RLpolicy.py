@@ -12,7 +12,7 @@ GAMMA = 0.9
 TAU = 0.01
 MEMORY_CAPACITY = 3000
 # MEMORY_CAPACITY = 10000
-BATCH_SIZE = 1   #暂时应该给的小一点
+BATCH_SIZE = 8   #暂时应该给的小一点
 
 
 #TODO:Actor需要调整成整数输出
@@ -152,10 +152,13 @@ class DDPG(object):
         self.pointer += 1
     
     def choose_action(self, s):
+        self.actor_eval.eval()
         s = torch.unsqueeze(torch.FloatTensor(s), 0)
         return self.actor_eval.choose_action(s)
     
     def learn(self):
+        self.actor_eval.train()
+
         # softly update the target networks
         for x in self.actor_target.state_dict().keys():
             eval('self.actor_target.' + x + '.data.mul_((1-TAU))')

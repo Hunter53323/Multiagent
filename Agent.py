@@ -10,6 +10,8 @@ class BaseAgent():
             self.electricity = 0
         elif mode == "Gas":
             self.gas = 0
+        elif mode == "Heat":
+            self.heat = 0
         else:
             pass
         
@@ -44,7 +46,7 @@ class Battery(BaseAgent):
         #电量约束,超出约束则给予惩罚
         if (self.electricity > self.max_electricity) \
             or (self.electricity < self.min_electricity):
-            reward = -10
+            reward = -100000
         else:
             reward = 0
 
@@ -61,6 +63,18 @@ class Battery(BaseAgent):
         #环境的render模块里面调用输出相应的数据
         pass
 
+class WaterTank(BaseAgent):
+    def __init__(self):
+        super().__init__(mode = "heat", name = "watertank")
+        self.heat = 1
+
+        self.action_space = spaces.Discrete(21)
+
+class Boiler(BaseAgent):
+    pass
+
+class CHP(BaseAgent):
+    pass
 class User(BaseAgent):
     def __init__(self, mode = "test"):
         super().__init__(name = "user")

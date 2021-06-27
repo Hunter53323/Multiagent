@@ -7,7 +7,7 @@ import numpy as np
 
 EPISODES = 500
 EP_STEPS = 23
-RENDER = False
+RENDER = True
 
 def normal_discrete(mean, var, action_space, low, high):
     """
@@ -36,13 +36,13 @@ def main():
     a_low_bounds = {key:0  for key, value in env.action_space.items()}
 
     ddpg = MADDPG(a_dims, s_dims, agent_names)
-    var = 10#3 # the controller of exploration which will decay during training process
+    var = 3#3 # the controller of exploration which will decay during training process
     t1 = time.time()
     for i in range(EPISODES):
         s = env.reset()
         ep_r = 0
         for j in range(EP_STEPS):
-            if RENDER and i>300 : env.render()
+            if RENDER and i>350 : env.render()
             # add explorative noise to action
             a = ddpg.choose_action(s)
             for key, value in a.items():
