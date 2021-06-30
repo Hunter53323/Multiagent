@@ -16,7 +16,6 @@ class Actor(nn.Module):
         x = F.relu(x)
         x = self.out(x)
         x = torch.tanh(x)
-        #TODO:试一下一维动作的情况
         _ , idx = x[0].max(0) #21个动作里面取最大的一个
         x[:, :] = 0
         x[:, idx] = 1

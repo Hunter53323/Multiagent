@@ -15,7 +15,6 @@ MEMORY_CAPACITY = 3000
 BATCH_SIZE = 8   #暂时应该给的小一点
 
 
-#TODO:Actor需要调整成整数输出
 #隐藏层维数为300时收敛会快很多
 class Actor(nn.Module):
     def __init__(self, s_dim, a_dim):
@@ -25,12 +24,11 @@ class Actor(nn.Module):
         self.out = nn.Linear(30, a_dim)
         self.out.weight.data.normal_(0, 0.1) # initilizaiton of OUT
     def choose_action(self, x):
-        # #两种思路，一种是一个动作一维取最大值，另一种是一类动作一维映射成动作空间内的动作
+        # #TODO:两种思路，一种是一个动作一维取最大值，另一种是一类动作一维映射成动作空间内的动作
         # x = self.fc1(x)
         # x = F.relu(x)
         # x = self.out(x)
         # x = torch.tanh(x)
-        # #TODO:试一下一维动作的情况
         # _ , idx = x[0].max(0) #21个动作里面取最大的一个
         # return idx.item() #type:tensor([k])
         #两种思路，一种是一个动作一维取最大值，另一种是一类动作一维映射成动作空间内的动作
@@ -180,7 +178,7 @@ class DDPG(object):
         # make action and evaluate its action values
         a = self.actor_eval(batch_s)
         q = self.critic_eval(batch_s_critic, a)
-        #动作误差的正负#TODO:
+        #动作误差的正负
         actor_loss = -torch.mean(q)
         # optimize the loss of actor network
         self.actor_optimizer.zero_grad()
