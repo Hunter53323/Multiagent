@@ -32,12 +32,14 @@ class Multiagent_energy(gym.Env):
         
         # self.action_space_battery = self.agents[0].action_space
         self.action_space = {}
-        self.action_space['battery'] = self.agents[0].action_space
+        # self.action_space['battery'] = self.agents[0].action_space
+        for ag in self.agents:
+            self.action_space[ag.name] = ag.action_space.n
         #取得维数使用action_sapce.n
-
         self.observation_space = {}
-        self.observation_space['battery'] = self.agents[0].observation_space.n
-        
+        # self.observation_space['battery'] = self.agents[0].observation_space.n
+        for ag in self.agents:
+            self.observation_space[ag.name] = ag.observation_space.n
         self.not_done = True
 
         #常量定义
@@ -80,6 +82,8 @@ class Multiagent_energy(gym.Env):
 
         satisfaction, extra_heat, extra_elec = self.users[0].judge_satisfaction(total_electricity_generate, total_heat_generate, self.satisfactory_factor)
         # 生产的电和热供给用户之后余量生成新的电池和水箱容量
+        if battery_charge_number < 0:
+            extra_elec = -0.1
         battery_electricity, battery_punish = self.agents[0].get_other_electricity(extra_elec)
         watertank_heat, watertank_punish = self.agents[1].get_other_heat(extra_heat)
         # 总成本
@@ -102,9 +106,11 @@ class Multiagent_energy(gym.Env):
 
         if done:
             self.not_done = False
+        render_list = {"battery_charge_number":battery_charge_number, "battery_sell_number":battery_sell_number, "watertank_release":watertank_release, "boiler_gas_consumption":boiler_gas_consumption, "solar_generate_elec":solar_generate_elec}
 
-        return self.observation, reward, done, {}
-        
+        #return self.observation, reward, done, {}
+        return self.observation, reward, done, render_list
+
     def step_old(self,actions):
         assert self.not_done, "24个时刻已经运行结束，请重置环境！"
         """
@@ -189,10 +195,18 @@ class Multiagent_energy(gym.Env):
         return self.observation
     
     def render(self):
-        for obs in self.observation:
-            print(obs[:6]+":", self.observation[obs], end = ' ')
+        for key, value in self.observation.items():
+            print(key[:]+":", value, end = ' ')            
+            #print(key[:6]+":", value, end = ' ')
         print("Time:", self.current_time_period, end = ' ')
         print()
+
+    def render_custom(self, render_th):
+        for obs, value in render_th.items():
+            print(obs+":", value, end = ' ')
+        print("Time:", self.current_time_period, end = ' ')
+        print()
+            
 
 
 def merge(*dicts):

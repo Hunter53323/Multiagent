@@ -48,7 +48,7 @@ class Battery(BaseAgent):
         if (self.electricity > self.max_electricity) \
             or (self.electricity < self.min_electricity):
             self.electricity = max(self.min_electricity, min(self.electricity, self.max_electricity))
-            reward = -100
+            reward = -10000
         else:
             reward = 0
         return reward
@@ -118,7 +118,7 @@ class WaterTank(BaseAgent):
         if (self.heat > self.max_heat) \
             or (self.heat < self.min_heat):
             self.heat = max(self.min_heat, min(self.heat, self.max_heat))
-            reward = -100
+            reward = -10000
         else:
             reward = 0
         return reward
@@ -129,7 +129,7 @@ class WaterTank(BaseAgent):
         assert self.action_space.contains(action), err_msg
 
         release_number = round(action / 10.0, 2)
-        self.heat = self.heat + release_number
+        self.heat = self.heat - release_number
         #热量约束，超出约束则给予惩罚
         reward = self._judge_constraint()
 
@@ -147,8 +147,8 @@ class CHP(BaseAgent):
         
         #动作空间为买气量从0-1
         self.action_space = spaces.Discrete(11)
-        #该智能体能观测到的观测空间为当前气价、用户热和电需求
-        self.observation_space = spaces.Discrete(3)
+        #该智能体能观测到的观测空间为当前电、气价、用户热和电需求
+        self.observation_space = spaces.Discrete(4)
 
         #常数定义
         self.max_generate_speed = 2
@@ -249,8 +249,8 @@ class User(BaseAgent):
         self.process = 0
         extra_heat = max(0, heat_provide - self.heat_demand)
         extra_elec = max(0, electricity_provide - self.electricity_demand)
-        elec_satisfaction = max(electricity_provide - self.electricity_demand, 2 * (self.electricity_demand - electricity_provide))
-        heat_satisfaction = max(heat_provide - self.heat_demand, 2 * (self.heat_demand - heat_provide))
+        elec_satisfaction = max(2*(electricity_provide - self.electricity_demand), 1 * (self.electricity_demand - electricity_provide))
+        heat_satisfaction = max(heat_provide - self.heat_demand, 1 * (self.heat_demand - heat_provide))
         #满意度的初始值和test模式中智能体的个数有关
         satisfaction = factor * (4 - heat_satisfaction - elec_satisfaction)
         return satisfaction, extra_heat, extra_elec

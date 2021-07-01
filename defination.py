@@ -1,3 +1,6 @@
+"""
+DEFINATION用于定义一些全局都会使用的量和通用函数
+"""
 import numpy as np
 OBSERVATION = np.array([ 
                 'current_electricity_price', 
@@ -11,7 +14,7 @@ OBSERVATION = np.array([
                 "CHP_heat_generate",
                 "boiler_heat_generate"
                 ])
-AGENT = ["Battery", "WaterTank", "CHP", "Boiler", "User"]
+AGENT = ["Battery", "WaterTank", "CHP", "Boiler", "User", "SolarPanel"]
 AGENT_NAME = ["battery", "watertank", "chp", "boiler"]
 
 obs_battery = [0,2,5]

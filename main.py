@@ -22,7 +22,8 @@ def normal_discrete(mean, var, action_space, low, high):
     return action_list
 
 def main():
-    env = Env.Multiagent_energy(mode = "test")
+    ii = 400
+    env = Env.Multiagent_energy()
     agent_names = env.get_agent_names()
     
     # s_dim = env.observation_space.shape[0]
@@ -31,8 +32,8 @@ def main():
     # a_low_bound = env.action_space.low
 
     s_dims = env.observation_space
-    a_dims = {key:value.n for key, value in env.action_space.items()}
-    a_bounds = {key:value.n-1 for key, value in env.action_space.items()}
+    a_dims = {key:value for key, value in env.action_space.items()}
+    a_bounds = {key:value-1 for key, value in env.action_space.items()}
     a_low_bounds = {key:0  for key, value in env.action_space.items()}
 
     ddpg = MADDPG(a_dims, s_dims, agent_names)
@@ -41,12 +42,13 @@ def main():
     for i in range(EPISODES):
         s = env.reset()
         ep_r = 0
+        if RENDER and i>ii:time.sleep(1)
         for j in range(EP_STEPS):
-            if RENDER and i>350 : env.render()
+            if RENDER and i>ii : env.render()
             # add explorative noise to action
             a = ddpg.choose_action(s)
             for key, value in a.items():
-                action_space_list = np.array(range(env.action_space[key].n))
+                action_space_list = np.array(range(env.action_space[key]))
                 a[key] = normal_discrete(value, var, action_space_list, a_low_bounds[key], a_bounds[key])
             s_, r, done, info = env.step(a)
             ddpg.store_transition(s, a, r , s_) # store the transition to memory
@@ -56,7 +58,11 @@ def main():
                 
             s = s_
             ep_r += r
+            if RENDER and i>ii : 
+                env.render_custom(info)
+                
             if j == EP_STEPS - 1:
+                #if RENDER and i>350 : env.render()
                 print('Episode: ', i, ' Reward: %i' % (ep_r), 'Explore: %.2f' % var)
                 #if ep_r > -300 : RENDER = True
                 break

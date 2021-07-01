@@ -10,18 +10,18 @@ LR_ACTOR = 0.001
 LR_CRITIC = 0.002
 GAMMA = 0.9
 TAU = 0.01
-MEMORY_CAPACITY = 3000
-# MEMORY_CAPACITY = 10000
-BATCH_SIZE = 8   #暂时应该给的小一点
+# MEMORY_CAPACITY = 3000
+MEMORY_CAPACITY = 5000
+BATCH_SIZE = 32   #暂时应该给的小一点
 
-
+K = 300
 #隐藏层维数为300时收敛会快很多
 class Actor(nn.Module):
     def __init__(self, s_dim, a_dim):
         super(Actor, self).__init__()
-        self.fc1 = nn.Linear(s_dim, 30)
+        self.fc1 = nn.Linear(s_dim, K)
         self.fc1.weight.data.normal_(0, 0.1) # initialization of FC1
-        self.out = nn.Linear(30, a_dim)
+        self.out = nn.Linear(K, a_dim)
         self.out.weight.data.normal_(0, 0.1) # initilizaiton of OUT
     def choose_action(self, x):
         # #TODO:两种思路，一种是一个动作一维取最大值，另一种是一类动作一维映射成动作空间内的动作
@@ -56,11 +56,11 @@ class Critic(nn.Module):
     #TODO: 这里的动作维数具体定义
     def __init__(self, s_dim, a_dim):
         super(Critic, self).__init__()
-        self.fcs = nn.Linear(s_dim, 30)
+        self.fcs = nn.Linear(s_dim, K)
         self.fcs.weight.data.normal_(0, 0.1)
-        self.fca = nn.Linear(a_dim, 30)
+        self.fca = nn.Linear(a_dim, K)
         self.fca.weight.data.normal_(0, 0.1)
-        self.out = nn.Linear(30, 1)
+        self.out = nn.Linear(K, 1)
         self.out.weight.data.normal_(0, 0.1)
     def forward(self, s, a):
         x = self.fcs(s)
@@ -86,19 +86,26 @@ class MADDPG():
         actions = {}
         for agent in self.DDPGs:
             if agent.name == "battery":
-                #sub_obs = {key: value for key, value in obs.items() if key in defination.OBSERVATION_BATTERY}
                 sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION_BATTERY])
                 actions['battery'] = agent.choose_action(sub_obs)
+            elif agent.name == "watertank":
+                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION_WATERTANK])
+                actions['watertank'] = agent.choose_action(sub_obs)
+            elif agent.name == "chp":
+                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION_CHP])
+                actions['chp'] = agent.choose_action(sub_obs)
+            elif agent.name == "boiler":
+                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION_BOILER])
+                actions['boiler'] = agent.choose_action(sub_obs)
             else:
-                raise Exception("其他智能体的部分还没有完成！")
+                raise Exception("请检查智能体名称！")
         return actions
 
     def store_transition(self, s_critic, a, r, s__critic):
         self.pointer += 1
         for agent in self.DDPGs:
-            if agent.name == "battery":
+            if agent.name in defination.AGENT_NAME:
                 agent.store_transition(s_critic, a[agent.name], r, s__critic)
-
 
     def learn(self):
         for agent in self.DDPGs:
@@ -125,6 +132,15 @@ class DDPG(object):
         if self.name == "battery":
             s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION_BATTERY}
             s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION_BATTERY}
+        elif self.name == "watertank":
+            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION_WATERTANK}
+            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION_WATERTANK}
+        elif self.name == "chp":
+            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION_CHP}
+            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION_CHP}
+        elif self.name == "boiler":
+            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION_BOILER}
+            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION_BOILER}
         else:
             raise Exception("请正确使用格式化函数！")
 
