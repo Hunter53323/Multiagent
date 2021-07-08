@@ -22,7 +22,8 @@ class Multiagent_energy(gym.Env):
         self.current_electricity_price = None
         self.current_gas_price = None
 
-        self.agents = [Battery(), WaterTank(), CHP(), Boiler()]  
+        self.agents = [Battery(), WaterTank(), CHP(), Boiler()] 
+        self.agents_name = defination.AGENT_NAME 
         # self.users = [User(self.run_mode)]
         self.users = [User("normal")]
         self.panels = [SolarPanel()]

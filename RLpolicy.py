@@ -6,16 +6,14 @@ import torch.nn.functional as F
 import numpy as np
 import defination
 
-LR_ACTOR = 0.001
-LR_CRITIC = 0.002
-GAMMA = 0.9
-TAU = 0.01
-# MEMORY_CAPACITY = 3000
-MEMORY_CAPACITY = 5000
-BATCH_SIZE = 32   #暂时应该给的小一点
+from torch.optim import Adam
+from torch.autograd import Variable
+from AAC.critics import AttentionCritic
+from AAC.misc import hard_update, disable_gradients, enable_gradients, soft_update
+from AAC.agents import AttentionAgent
 
-K = 300
-#隐藏层维数为300时收敛会快很多
+MSELoss = torch.nn.MSELoss()
+
 class Actor(nn.Module):
     def __init__(self, s_dim, a_dim):
         super(Actor, self).__init__()
@@ -52,163 +50,289 @@ class Actor(nn.Module):
         # x[:, idx] = 1
         return x #type:tensor([k])
 
-class Critic(nn.Module):
-    #TODO: 这里的动作维数具体定义
-    def __init__(self, s_dim, a_dim):
-        super(Critic, self).__init__()
-        self.fcs = nn.Linear(s_dim, K)
-        self.fcs.weight.data.normal_(0, 0.1)
-        self.fca = nn.Linear(a_dim, K)
-        self.fca.weight.data.normal_(0, 0.1)
-        self.out = nn.Linear(K, 1)
-        self.out.weight.data.normal_(0, 0.1)
-    def forward(self, s, a):
-        x = self.fcs(s)
-        y = self.fca(a)
-        actions_value = self.out(F.relu(x+y))
-        return actions_value
+class Actor_Attention_Critic(object):
+    def __init__(self, agent_init_params, sa_size,
+                 gamma=0.95, tau=0.01, pi_lr=0.01, q_lr=0.01,
+                 reward_scale=10.,
+                 pol_hidden_dim=128,
+                 critic_hidden_dim=128, attend_heads=4,
+                 **kwargs):
+        self.nagents = len(sa_size)
+        self.agents = [AttentionAgent(lr=pi_lr,
+                                        hidden_dim=pol_hidden_dim,
+                                        **params)
+                            for params in agent_init_params]
+        self.critic = AttentionCritic(sa_size, hidden_dim=critic_hidden_dim,
+                                      attend_heads=attend_heads)
+        self.target_critic = AttentionCritic(sa_size, hidden_dim=critic_hidden_dim,
+                                             attend_heads=attend_heads)
+        hard_update(self.target_critic, self.critic)
+        self.critic_optimizer = Adam(self.critic.parameters(), lr=q_lr,
+                                     weight_decay=1e-3)                                     
+        self.gamma = gamma
+        self.tau = tau
+        self.pi_lr = pi_lr
+        self.q_lr = q_lr
+        self.reward_scale = reward_scale
+        #设备运算位置 
+        self.pol_dev = 'cpu'  # device for policies
+        self.critic_dev = 'cpu'  # device for critics
+        self.trgt_pol_dev = 'cpu'  # device for target policies
+        self.trgt_critic_dev = 'cpu'  # device for target critics
+        self.niter = 0
 
-    def shut_down_grad(self):
-        self.requires_grad_ = False
+    @property
+    def policies(self):
+        return [a.policy for a in self.agents]
 
-class MADDPG():
-    def __init__(self, a_dims, s_dims, agents):
+    @property
+    def target_policies(self):
+        return [a.target_policy for a in self.agents]
+
+    def step(self, observations, explore=False):
         """
-        param:
-        a_dims:动作空间的字典，key为智能体名称，value为智能体动作空间维数
-        s_dims:状态空间的字典，key为智能体名称，value为智能体状态空间维数
+        Take a step forward in environment with all agents
+        Inputs:
+            observations: List of observations for each agent
+        Outputs:
+            actions: List of actions for each agent
         """
-        s_dim_all = len(defination.OBSERVATION)
-        self.DDPGs = [DDPG(a_dims[agent], s_dims[agent], s_dim_all, agent) for agent in agents]
-        self.pointer = 0
-
-    def choose_action(self, obs):
+        #variables进行不同的线程之间的堆叠，目前暂时不用实现
         actions = {}
-        for agent in self.DDPGs:
-            if agent.name == "battery":
-                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION_BATTERY])
-                actions['battery'] = agent.choose_action(sub_obs)
-            elif agent.name == "watertank":
-                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION_WATERTANK])
-                actions['watertank'] = agent.choose_action(sub_obs)
-            elif agent.name == "chp":
-                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION_CHP])
-                actions['chp'] = agent.choose_action(sub_obs)
-            elif agent.name == "boiler":
-                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION_BOILER])
-                actions['boiler'] = agent.choose_action(sub_obs)
+        for a in self.agents:
+            if a.name == "battery":
+                sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_BATTERY])
+                sub_obs = Variable(torch.Tensor(sub_obs), requires_grad=False)
+                sub_obs = torch.unsqueeze(sub_obs,0)
+                actions['battery'] = a.step(sub_obs, explore = explore).data.numpy()
+            elif a.name == "watertank":
+                sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_WATERTANK])
+                sub_obs = Variable(torch.Tensor(sub_obs),requires_grad = False)
+                sub_obs = torch.unsqueeze(sub_obs,0)
+                actions['watertank'] = a.step(sub_obs, explore = explore).data.numpy()
+            elif a.name == "chp":
+                sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_CHP])
+                sub_obs = Variable(torch.Tensor(sub_obs),requires_grad = False)
+                sub_obs = torch.unsqueeze(sub_obs,0)
+                actions['chp'] = a.step(sub_obs, explore = explore).data.numpy()
+            elif a.name == "boiler":
+                sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_BOILER])
+                sub_obs = Variable(torch.Tensor(sub_obs),requires_grad = False)
+                sub_obs = torch.unsqueeze(sub_obs,0)
+                actions['boiler'] = a.step(sub_obs, explore = explore).data.numpy()
             else:
                 raise Exception("请检查智能体名称！")
-        return actions
 
-    def store_transition(self, s_critic, a, r, s__critic):
-        self.pointer += 1
-        for agent in self.DDPGs:
-            if agent.name in defination.AGENT_NAME:
-                agent.store_transition(s_critic, a[agent.name], r, s__critic)
+        return actions  #理论上这个action可以直接step了
+        #return [a.step(obs, explore=explore) for a, obs in zip(self.agents,observations)]
 
-    def learn(self):
-        for agent in self.DDPGs:
-            agent.learn()
-
-class DDPG(object):
-    def __init__(self, a_dim, s_dim, s_dim_critic, name):
-        self.a_dim, self.s_dim, self.s_dim_critic = a_dim, s_dim, s_dim_critic
-        self.memory = np.zeros((MEMORY_CAPACITY, 2*s_dim + 2*s_dim_critic + a_dim + 1), dtype=np.float32)
-        self.pointer = 0 # serves as updating the memory data 
-        # Create the 4 network objects
-        self.actor_eval = Actor(s_dim, a_dim)
-        self.actor_target = Actor(s_dim, a_dim)
-        self.critic_eval = Critic(s_dim_critic, a_dim)
-        self.critic_target = Critic(s_dim_critic, a_dim)
-        # create 2 optimizers for actor and critic
-        self.actor_optimizer = torch.optim.Adam(self.actor_eval.parameters(), lr=LR_ACTOR)
-        self.critic_optimizer = torch.optim.Adam(self.critic_eval.parameters(), lr=LR_CRITIC)
-        # Define the loss function for critic network update
-        self.loss_func = nn.MSELoss()
-        self.name = name
-
-    def _formatting(self, s_critic, s__critic):
-        if self.name == "battery":
-            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION_BATTERY}
-            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION_BATTERY}
-        elif self.name == "watertank":
-            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION_WATERTANK}
-            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION_WATERTANK}
-        elif self.name == "chp":
-            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION_CHP}
-            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION_CHP}
-        elif self.name == "boiler":
-            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION_BOILER}
-            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION_BOILER}
-        else:
-            raise Exception("请正确使用格式化函数！")
-
-        return s, s_
-
-    def store_transition(self, s_critic, a, r, s__critic): # how to store the episodic data to buffer
+    def update_critic(self, sample, soft=True, logger=None, **kwargs):
         """
-        储存当前的observation,
-        传入的数据中，s系列全部为字典，a是具体的动作（列表），r是具体的奖励
+        Update central critic for all agents
         """
-        #提取对应智能体的数据
-        s , s_ = self._formatting(s_critic, s__critic)
-        #数据转化为列表
-        s = defination.dict_to_list(s)
-        s_ = defination.dict_to_list(s_)
-        # a = defination.dict_to_list(a)
-        s_critic = defination.dict_to_list(s_critic)
-        s__critic = defination.dict_to_list(s__critic)
-
-        transition = np.hstack((s, s_critic, a, [r], s_, s__critic))
-        index = self.pointer % MEMORY_CAPACITY # replace the old data with new data 
-        self.memory[index, :] = transition
-        self.pointer += 1
-    
-    def choose_action(self, s):
-        self.actor_eval.eval()
-        s = torch.unsqueeze(torch.FloatTensor(s), 0)
-        return self.actor_eval.choose_action(s)
-    
-    def learn(self):
-        self.actor_eval.train()
-
-        # softly update the target networks
-        for x in self.actor_target.state_dict().keys():
-            eval('self.actor_target.' + x + '.data.mul_((1-TAU))')
-            eval('self.actor_target.' + x + '.data.add_(TAU*self.actor_eval.' + x + '.data)')
-        for x in self.critic_target.state_dict().keys():
-            eval('self.critic_target.' + x + '.data.mul_((1-TAU))')
-            eval('self.critic_target.' + x + '.data.add_(TAU*self.critic_eval.' + x + '.data)')           
-        # sample from buffer a mini-batch data
-        indices = np.random.choice(MEMORY_CAPACITY, size=BATCH_SIZE)
-        batch_trans = self.memory[indices, :]
-        # extract data from mini-batch of transitions including s, a, r, s_
-        batch_s = torch.FloatTensor(batch_trans[:, :self.s_dim])
-        batch_s_critic = torch.FloatTensor(batch_trans[:, self.s_dim : self.s_dim + self.s_dim_critic])
-        batch_a = torch.FloatTensor(batch_trans[:, self.s_dim + self.s_dim_critic : self.s_dim + self.s_dim_critic + self.a_dim])
-        batch_r = torch.FloatTensor(batch_trans[:, self.s_dim + self.s_dim_critic + self.a_dim : self.s_dim + self.s_dim_critic + self.a_dim + 1])
-        batch_s_ = torch.FloatTensor(batch_trans[:, -self.s_dim_critic - self.s_dim:-self.s_dim_critic])
-        batch_s__critic = torch.FloatTensor(batch_trans[:, -self.s_dim_critic:])
-        
-        # make action and evaluate its action values
-        a = self.actor_eval(batch_s)
-        q = self.critic_eval(batch_s_critic, a)
-        #动作误差的正负
-        actor_loss = -torch.mean(q)
-        # optimize the loss of actor network
-        self.actor_optimizer.zero_grad()
-        actor_loss.backward()
-        self.actor_optimizer.step()
-        
-        # compute the target Q value using the information of next state
-        a_target = self.actor_target(batch_s_)
-        q_tmp = self.critic_target(batch_s__critic, a_target)
-        q_target = batch_r + GAMMA * q_tmp
-        # compute the current q value and the loss
-        q_eval = self.critic_eval(batch_s_critic, batch_a)
-        td_error = self.loss_func(q_target, q_eval)
-        # optimize the loss of critic network
-        self.critic_optimizer.zero_grad()
-        td_error.backward()
+        obs, acs, rews, next_obs, dones = sample
+        # Q loss
+        next_acs = []
+        next_log_pis = []
+        for pi, ob in zip(self.target_policies, next_obs):
+            curr_next_ac, curr_next_log_pi = pi(ob, return_log_pi=True)
+            next_acs.append(curr_next_ac)
+            next_log_pis.append(curr_next_log_pi)
+        trgt_critic_in = list(zip(next_obs, next_acs))
+        critic_in = list(zip(obs, acs))
+        next_qs = self.target_critic(trgt_critic_in)
+        critic_rets = self.critic(critic_in, regularize=True,
+                                  logger=logger, niter=self.niter)
+        q_loss = 0
+        for a_i, nq, log_pi, (pq, regs) in zip(range(self.nagents), next_qs,
+                                               next_log_pis, critic_rets):
+            target_q = (rews[a_i].view(-1, 1) +
+                        self.gamma * nq *
+                        (1 - dones[a_i].view(-1, 1)))
+            if soft:
+                target_q -= log_pi / self.reward_scale
+            q_loss += MSELoss(pq, target_q.detach())
+            for reg in regs:
+                q_loss += reg  # regularizing attention
+        q_loss.backward()
+        self.critic.scale_shared_grads()
+        grad_norm = torch.nn.utils.clip_grad_norm_(
+            self.critic.parameters(), 10 * self.nagents)
         self.critic_optimizer.step()
+        self.critic_optimizer.zero_grad()
+
+        if logger is not None:
+            logger.add_scalar('losses/q_loss', q_loss, self.niter)
+            logger.add_scalar('grad_norms/q', grad_norm, self.niter)
+        self.niter += 1
+
+    def update_policies(self, sample, soft=True, logger=None, **kwargs):
+        obs, acs, rews, next_obs, dones = sample
+        samp_acs = []
+        all_probs = []
+        all_log_pis = []
+        all_pol_regs = []
+
+        for a_i, pi, ob in zip(range(self.nagents), self.policies, obs):
+            curr_ac, probs, log_pi, pol_regs, ent = pi(
+                ob, return_all_probs=True, return_log_pi=True,
+                regularize=True, return_entropy=True)
+            if logger is not None:
+                logger.add_scalar('agent%i/policy_entropy' % a_i, ent,
+                                self.niter)
+            samp_acs.append(curr_ac)
+            all_probs.append(probs)
+            all_log_pis.append(log_pi)
+            all_pol_regs.append(pol_regs)
+
+        critic_in = list(zip(obs, samp_acs))
+        critic_rets = self.critic(critic_in, return_all_q=True)
+        for a_i, probs, log_pi, pol_regs, (q, all_q) in zip(range(self.nagents), all_probs,
+                                                            all_log_pis, all_pol_regs,
+                                                            critic_rets):
+            curr_agent = self.agents[a_i]
+            v = (all_q * probs).sum(dim=1, keepdim=True)
+            pol_target = q - v
+            if soft:
+                pol_loss = (log_pi * (log_pi / self.reward_scale - pol_target).detach()).mean()
+            else:
+                pol_loss = (log_pi * (-pol_target).detach()).mean()
+            for reg in pol_regs:
+                pol_loss += 1e-3 * reg  # policy regularization
+            # don't want critic to accumulate gradients from policy loss
+            disable_gradients(self.critic)
+            pol_loss.backward()
+            enable_gradients(self.critic)
+
+            grad_norm = torch.nn.utils.clip_grad_norm_(
+                curr_agent.policy.parameters(), 0.5)
+            curr_agent.policy_optimizer.step()
+            curr_agent.policy_optimizer.zero_grad()
+
+            if logger is not None:
+                logger.add_scalar('agent%i/losses/pol_loss' % a_i,
+                                  pol_loss, self.niter)
+                logger.add_scalar('agent%i/grad_norms/pi' % a_i,
+                                  grad_norm, self.niter)
+
+
+    def update_all_targets(self):
+        """
+        Update all target networks (called after normal updates have been
+        performed for each agent)
+        """
+        soft_update(self.target_critic, self.critic, self.tau)
+        for a in self.agents:
+            soft_update(a.target_policy, a.policy, self.tau)
+
+    def prep_training(self, device='gpu'):
+        self.critic.train()
+        self.target_critic.train()
+        for a in self.agents:
+            a.policy.train()
+            a.target_policy.train()
+        if device == 'gpu':
+            fn = lambda x: x.cuda()
+        else:
+            fn = lambda x: x.cpu()
+        if not self.pol_dev == device:
+            for a in self.agents:
+                a.policy = fn(a.policy)
+            self.pol_dev = device
+        if not self.critic_dev == device:
+            self.critic = fn(self.critic)
+            self.critic_dev = device
+        if not self.trgt_pol_dev == device:
+            for a in self.agents:
+                a.target_policy = fn(a.target_policy)
+            self.trgt_pol_dev = device
+        if not self.trgt_critic_dev == device:
+            self.target_critic = fn(self.target_critic)
+            self.trgt_critic_dev = device
+
+    def prep_rollouts(self, device='cpu'):
+        for a in self.agents:
+            a.policy.eval()
+        if device == 'gpu':
+            fn = lambda x: x.cuda()
+        else:
+            fn = lambda x: x.cpu()
+        # only need main policy for rollouts
+        if not self.pol_dev == device:
+            for a in self.agents:
+                a.policy = fn(a.policy)
+            self.pol_dev = device
+
+    def save(self, filename):
+        """
+        Save trained parameters of all agents into one file
+        """
+        self.prep_training(device='cpu')  # move parameters to CPU before saving
+        save_dict = {'init_dict': self.init_dict,
+                     'agent_params': [a.get_params() for a in self.agents],
+                     'critic_params': {'critic': self.critic.state_dict(),
+                                       'target_critic': self.target_critic.state_dict(),
+                                       'critic_optimizer': self.critic_optimizer.state_dict()}}
+        torch.save(save_dict, filename)
+
+    @classmethod
+    def init_from_env(cls, env, gamma=0.95, tau=0.01,
+                      pi_lr=0.01, q_lr=0.01,
+                      reward_scale=10.,
+                      pol_hidden_dim=128, critic_hidden_dim=128, attend_heads=4,
+                      **kwargs):
+        """
+        Instantiate instance of this class from multi-agent environment
+
+        env: Multi-agent Gym environment
+        gamma: discount factor
+        tau: rate of update for target networks
+        lr: learning rate for networks
+        hidden_dim: number of hidden dimensions for networks
+        """
+        agent_init_params = []
+        sa_size = []
+        env_action_space = defination.dict_to_list(env.action_space)
+        env_observation_space = defination.dict_to_list(env.observation_space)
+        for acsp, obsp, aname in zip(env_action_space,
+                              env_observation_space, env.agents_name):
+            agent_init_params.append({'num_in_pol': obsp,
+                                      'num_out_pol': acsp,
+                                      'agent_name':aname})
+            sa_size.append((obsp, acsp))
+
+        init_dict = {'gamma': gamma, 'tau': tau,
+                     'pi_lr': pi_lr, 'q_lr': q_lr,
+                     'reward_scale': reward_scale,
+                     'pol_hidden_dim': pol_hidden_dim,
+                     'critic_hidden_dim': critic_hidden_dim,
+                     'attend_heads': attend_heads,
+                     'agent_init_params': agent_init_params,
+                     'sa_size': sa_size}
+        instance = cls(**init_dict)
+        instance.init_dict = init_dict
+        return instance
+
+    @classmethod
+    def init_from_save(cls, filename, load_critic=False):
+        """
+        Instantiate instance of this class from file created by 'save' method
+        """
+        save_dict = torch.load(filename)
+        instance = cls(**save_dict['init_dict'])
+        instance.init_dict = save_dict['init_dict']
+        for a, params in zip(instance.agents, save_dict['agent_params']):
+            a.load_params(params)
+
+        if load_critic:
+            critic_params = save_dict['critic_params']
+            instance.critic.load_state_dict(critic_params['critic'])
+            instance.target_critic.load_state_dict(critic_params['target_critic'])
+            instance.critic_optimizer.load_state_dict(critic_params['critic_optimizer'])
+        return instance
+
+    def learn(self, sample, logger = None, device = "cpu"):
+        self.prep_training(device)
+        self.update_critic(sample, logger = logger)
+        self.update_policies(sample, logger = logger)
+        self.update_all_targets()
