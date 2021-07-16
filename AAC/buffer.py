@@ -3,8 +3,8 @@ from torch import Tensor
 from torch.autograd import Variable
 import defination
 
-MEMORY_CAPACITY = 3000
-
+# MEMORY_CAPACITY = 3000
+MEMORY_CAPACITY = 10000
 class ReplayBuffer(object):
     """
     Replay Buffer for multi-agent RL with parallel rollouts
@@ -122,7 +122,7 @@ class myBuffer(ReplayBuffer):
         for i in defination.OBSERVATION_BOILER:
             tem.append(observations[i])
         format_obs.append(np.array(tem))
-        format_obs = np.array([format_obs])
+        format_obs = np.array([format_obs], dtype = object)
 
         format_action = []
         for ag in defination.AGENT_NAME:
@@ -150,7 +150,7 @@ class myBuffer(ReplayBuffer):
         for i in defination.OBSERVATION_BOILER:
             tem.append(next_observations[i])
         format_next_obs.append(np.array(tem))
-        format_next_obs = np.array([format_next_obs])
+        format_next_obs = np.array([format_next_obs], dtype = object)
         
         format_done = []
         for ag in defination.AGENT_NAME:

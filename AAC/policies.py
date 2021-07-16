@@ -82,31 +82,3 @@ class DiscretePolicy(BasePolicy):
         if len(rets) == 1:
             return rets[0]
         return rets
-
-K=30
-class Actor(nn.Module):
-    def __init__(self, s_dim, a_dim):
-        super(Actor, self).__init__()
-        self.fc1 = nn.Linear(s_dim, K)
-        self.fc1.weight.data.normal_(0, 0.1) # initialization of FC1
-        self.out = nn.Linear(K, a_dim)
-        self.out.weight.data.normal_(0, 0.1) # initilizaiton of OUT
-    def choose_action(self, x):
-        x = self.fc1(x)
-        x = F.relu(x)
-        x = self.out(x)
-        x = torch.tanh(x)
-        _ , idx = x[0].max(0) #21个动作里面取最大的一个
-        x[:, :] = 0
-        x[:, idx] = 1
-        return x.detach()[0] #type:tensor([k])
-
-    def forward(self, x):
-        x = self.fc1(x)
-        x = F.relu(x)
-        x = self.out(x)
-        x = torch.tanh(x)
-        _ , idx = x[0].max(0) #21个动作里面取最大的一个
-        # x[:, :] = 0
-        # x[:, idx] = 1
-        return x #type:tensor([k])

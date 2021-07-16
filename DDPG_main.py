@@ -4,10 +4,11 @@ import DDPG_policy
 from DDPG_policy import MADDPG
 import time
 import numpy as np
+from logger import Mylogger
 
-EPISODES = 500
+# EPISODES = 2000
 EP_STEPS = 23
-RENDER = True
+RENDER = False
 
 def normal_discrete(mean, var, action_space, low, high):
     """
@@ -23,8 +24,11 @@ def normal_discrete(mean, var, action_space, low, high):
 
 def main():
     ii = 400
+    EPISODES = 2000
+    max_reward = -10000
     env = Env.Multiagent_energy()
     agent_names = env.get_agent_names()
+    Log = Mylogger("DDPG_data")
     
     # s_dim = env.observation_space.shape[0]
     # a_dim = env.action_space.shape[0]
@@ -39,18 +43,20 @@ def main():
     ddpg = MADDPG(a_dims, s_dims, agent_names)
     var = 3#3 # the controller of exploration which will decay during training process
     t1 = time.time()
-    for i in range(EPISODES):
+    i = 0
+    while i < EPISODES:
+        i += 1
         s = env.reset()
         ep_r = 0
         if RENDER and i>ii:time.sleep(1)
         for j in range(EP_STEPS):
-            if RENDER and i>ii : env.render()
+            # if RENDER and i>ii : env.render()
             # add explorative noise to action
             a = ddpg.choose_action(s)
             for key, value in a.items():
                 action_space_list = np.array(range(env.action_space[key]))
                 a[key] = normal_discrete(value, var, action_space_list, a_low_bounds[key], a_bounds[key])
-            s_, r, done, info = env.step(a)
+            s_, r, done, info = env.step_boiler(a)
             ddpg.store_transition(s, a, r , s_) # store the transition to memory
             if ddpg.pointer > DDPG_policy.MEMORY_CAPACITY:
                 var *= 0.9995 # decay the exploration controller factor
@@ -63,11 +69,22 @@ def main():
                 
             if j == EP_STEPS - 1:
                 #if RENDER and i>350 : env.render()
+                if EPISODES == 2000:EPISODES += i
+                if ep_r > max_reward:
+                    best_actions = env.get_save()
+                    max_reward = ep_r
                 print('Episode: ', i, ' Reward: %i' % (ep_r), 'Explore: %.2f' % var)
+                if ep_r > 0:Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
                 #if ep_r > -300 : RENDER = True
                 break
+            if done:
+                print("ERROR")
+                break
     print('Running time: ', time.time() - t1)
-    #TODO: 每次24个时刻之后的总的reward作为总的reward，然后每个大epoch进行训练
+    print("best_reward:", max_reward)
+    print("best_actions:")
+    for items in best_actions.items():
+        print(items)
 
 if __name__=="__main__":
     main()

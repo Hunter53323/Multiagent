@@ -75,7 +75,6 @@ def main():
                 #if ep_r > -300 : RENDER = True
                 break
     print('Running time: ', time.time() - t1)
-    #TODO: 每次24个时刻之后的总的reward作为总的reward，然后每个大epoch进行训练
 
 if __name__=="__main__":
     main()

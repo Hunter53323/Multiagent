@@ -45,7 +45,6 @@ class Actor(nn.Module):
         return x #type:tensor([k])
 
 class Critic(nn.Module):
-    #TODO: 这里的动作维数具体定义
     def __init__(self, s_dim, a_dim):
         super(Critic, self).__init__()
         self.fcs = nn.Linear(s_dim, K)

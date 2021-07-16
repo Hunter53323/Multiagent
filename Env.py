@@ -7,6 +7,7 @@ from gym.utils import seeding
 import numpy as np
 from Agent import Battery, WaterTank, CHP, Boiler, User, SolarPanel
 import defination
+#TODO： 考虑四个reward是不是可以独立出来进行处理
 
 class Multiagent_energy(gym.Env):
 
@@ -44,9 +45,14 @@ class Multiagent_energy(gym.Env):
         self.not_done = True
 
         #常量定义
-        self.earning_factor = 10
-        self.cost_factor = 10
+        self.earning_factor = 5
+        self.cost_factor = 5   #TODO:加大
+        # self.satisfactory_factor = 30
         self.satisfactory_factor = 10
+
+
+        self.save_dict = {}
+        
         
     def get_agent_names(self):
         return [ag.name for ag in self.agents]
@@ -55,17 +61,16 @@ class Multiagent_energy(gym.Env):
         # cost一定是负的
         buy_electricity_cost = self.current_electricity_price * elec
         buy_gas_cost = self.current_gas_price * gas
-        return -self.cost_factor * (buy_electricity_cost + buy_gas_cost)
+        return round(-self.cost_factor * (buy_electricity_cost + buy_gas_cost),2)
 
     def _cal_earning(self, sell_number):
-        return sell_number * self.current_electricity_price * self.earning_factor
+        return round(sell_number * self.current_electricity_price * self.earning_factor * 0.5,2)
 
     def _cal_punish(self, *punish):
         return sum(punish)
 
-    def step(self, actions):
+    def step_boiler(self, actions):
         assert self.not_done, "24个时刻已经运行结束，请重置环境！"
-        #TODO:考虑太阳能的产电是否可以和需求一起放到前面一个时刻
         solar_generate_elec = self.panels[0].generate(self.current_time_period)
         for key, value in actions.items():
             if key == "battery":
@@ -78,23 +83,10 @@ class Multiagent_energy(gym.Env):
                 boiler_heat_generate, boiler_gas_consumption, boiler_punish = self.agents[3].step(value)
             else:
                 raise Exception("请检查智能体名称！")
-        total_electricity_generate = solar_generate_elec - min(battery_charge_number, 0) + chp_observation["CHP_electricity_generate"]
-        total_heat_generate = boiler_heat_generate["boiler_heat_generate"] + watertank_release
 
-        satisfaction, extra_heat, extra_elec = self.users[0].judge_satisfaction(total_electricity_generate, total_heat_generate, self.satisfactory_factor)
-        # 生产的电和热供给用户之后余量生成新的电池和水箱容量
-        if battery_charge_number < 0:
-            extra_elec = -0.1
-        battery_electricity, battery_punish = self.agents[0].get_other_electricity(extra_elec)
-        watertank_heat, watertank_punish = self.agents[1].get_other_heat(extra_heat)
-        # 总成本
-        cost_all = self._cal_costs(max(0,battery_charge_number), chp_gas_consumption + boiler_gas_consumption)
-        #惩罚
-        punish = self._cal_punish(battery_punish, watertank_punish, chp_punish, boiler_punish)
-        earnings = self._cal_earning(battery_sell_number)
-        #计算总体的reward
-        reward = self.calculate_reward(cost_all, satisfaction, earnings, punish)
-
+        satisfaction, extra_heat, extra_elec = self.users[0].judge_satisfaction(0, boiler_heat_generate["boiler_heat_generate"], self.satisfactory_factor)
+        # print(self.observation["heat_demand"], boiler_heat_generate["boiler_heat_generate"], satisfaction)
+        
 
         #当前时刻前进到下一个时刻
         self.current_time_period += 1
@@ -107,63 +99,72 @@ class Multiagent_energy(gym.Env):
 
         if done:
             self.not_done = False
-        render_list = {"battery_charge_number":battery_charge_number, "battery_sell_number":battery_sell_number, "watertank_release":watertank_release, "boiler_gas_consumption":boiler_gas_consumption, "solar_generate_elec":solar_generate_elec}
+        render_list = {"watertank_release":watertank_release, "boiler_gas_consumption":boiler_gas_consumption}
+        
+        cost_and_earning_dict = {"heat_generate":boiler_heat_generate["boiler_heat_generate"]}
+        self.save(merge(render_list, self.observation, cost_and_earning_dict))
 
-        #return self.observation, reward, done, {}
-        return self.observation, reward, done, render_list
+        return self.observation, satisfaction, done, {}
+        # return self.observation, reward, done, render_list
 
-    def step_old(self,actions):
+    def step(self, actions):
+        #TODO 热的消耗关系不太对，需要查一下
         assert self.not_done, "24个时刻已经运行结束，请重置环境！"
-        """
-        self.current_electricity_price = self.electricity_price_all[self.current_time_period]
-        self.current_gas_price = self.gas_price_all
-        current_price = self._get_current_price()
-        """
+        solar_generate_elec = self.panels[0].generate(self.current_time_period)
         for key, value in actions.items():
             if key == "battery":
-                battery_electricity, battery_charge_number, battery_reward = self.agents[0].step(value)
+                battery_electricity, battery_charge_number, battery_punish, battery_sell_number = self.agents[0].step(value)
+            elif key == "watertank":
+                watertank_heat, watertank_release, watertank_punish = self.agents[1].step(value)
+            elif key == "chp":
+                chp_observation, chp_gas_consumption, chp_punish = self.agents[2].step(value)
+            elif key == "boiler":
+                boiler_heat_generate, boiler_gas_consumption, boiler_punish = self.agents[3].step(value)
             else:
-                raise Exception("其他智能体还没有完成！")
+                raise Exception("请检查智能体名称！")
+        total_electricity_generate = round(solar_generate_elec - min(battery_charge_number, 0) + chp_observation["CHP_electricity_generate"],2)
+        total_heat_generate = round(boiler_heat_generate["boiler_heat_generate"] + watertank_release + chp_observation["CHP_heat_generate"],2)
 
-        if battery_charge_number > 0:
-            #买电的消耗
-            buy_electricity_cost = -1 * self.current_electricity_price * battery_charge_number
-        else:
-            buy_electricity_cost = 0
-        #成本，测试模式下
-        cost_all = buy_electricity_cost
-        #TODO: 用户买电的成本计算
-        
-        #用户满意度，测试模式下
-        satisfaction = self.users[0].judge_satisfaction(battery_charge_number, 0)
-
+        satisfaction, extra_heat, extra_elec = self.users[0].judge_satisfaction(total_electricity_generate, total_heat_generate, self.satisfactory_factor)
+        # 生产的电和热供给用户之后余量生成新的电池和水箱容量
+        # if battery_charge_number < 0:
+        #     extra_elec = -0.1#TODO:放电的最终判断有些问题
+        battery_electricity, battery_punish = self.agents[0].get_other_electricity(extra_elec)
+        watertank_heat, watertank_punish = self.agents[1].get_other_heat(extra_heat)
+        # 总成本
+        cost_all = self._cal_costs(max(0,battery_charge_number), chp_gas_consumption + boiler_gas_consumption)
+        # cost_all = 0  #TODO：特殊条件处理
         #惩罚
-        punish = battery_reward
-        earnings = 0
-        reward = self.calculate_reward(cost_all, satisfaction, earnings, punish)
+        punish = self._cal_punish(battery_punish, watertank_punish, chp_punish, boiler_punish)
+        earnings = self._cal_earning(battery_sell_number)
+        #计算总体的reward
+        
 
         #当前时刻前进到下一个时刻
         self.current_time_period += 1
         done = bool(
-            self.current_time_period >= 23
+            self.current_time_period >= 23 or
+            punish < -5000 #done的新步骤
         )
+        punish = max(punish, -100)  #惩罚不给加
+        reward = self.calculate_reward(cost_all, satisfaction, earnings, punish)
         next_price = self._get_current_price()
         next_demand = self._getdemand()
-        self.observation = merge(next_price, next_demand, battery_electricity)
-        # if not done:
-        #     next_price = self._get_current_price()
-        #     next_demand = self._getdemand()
-        #     self.observation = merge(next_price, next_demand, battery_electricity)
-        # else:
-        #     self.observation = {}
-        #     self.not_done = False
+        self.observation = merge(next_price, next_demand, battery_electricity, watertank_heat, chp_observation, boiler_heat_generate)
+
         if done:
             self.not_done = False
+        render_list = {"battery_charge_number":battery_charge_number, "battery_sell_number":battery_sell_number, "watertank_release":watertank_release, "boiler_gas_consumption":boiler_gas_consumption, "solar_generate_elec":solar_generate_elec}
+        
+        cost_and_earning_dict = {"cost":cost_all, "earning":earnings, "elec_generate":total_electricity_generate, "heat_generate":total_heat_generate}
+        self.save(merge(render_list, self.observation, cost_and_earning_dict))
 
         return self.observation, reward, done, {}
-    #测试模式下的该函数
+        # return self.observation, reward, done, render_list
+    
     def _getdemand(self):
-        return self.users[0].generate_demand()
+        # return self.users[0].generate_demand()
+        return self.users[0].generate_demand_fixed(self.current_time_period)
 
     def calculate_reward(self, cost, satisfactory, earnings, punish):
         return cost + satisfactory + earnings + punish
@@ -192,6 +193,8 @@ class Multiagent_energy(gym.Env):
         boiler_heat_generate = self.agents[3].reset()
 
         self.observation = merge(current_price, demand, battery_electricity, watertank_heat, chp_observation, boiler_heat_generate)
+        self.save_dict = {}
+        self.save(self.observation)
 
         return self.observation
     
@@ -207,7 +210,17 @@ class Multiagent_energy(gym.Env):
             print(obs+":", value, end = ' ')
         print("Time:", self.current_time_period, end = ' ')
         print()
-            
+
+    def save(self, obs_dict):
+        for key, value in obs_dict.items():
+            if key in self.save_dict.keys():
+                self.save_dict[key].append(value)
+            else:
+                self.save_dict[key] = [value]
+
+    def get_save(self):
+        assert not self.not_done, "环境仍在进行，请等待环境运行完成再获取！"
+        return self.save_dict
 
 
 def merge(*dicts):

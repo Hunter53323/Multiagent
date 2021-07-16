@@ -53,7 +53,7 @@ class Actor_Attention_Critic(object):
     def target_policies(self):
         return [a.target_policy for a in self.agents]
 
-    def step(self, observations, explore=False):
+    def step(self, observations, explore=False, to_gpu = False):
         """
         Take a step forward in environment with all agents
         Inputs:
@@ -68,22 +68,22 @@ class Actor_Attention_Critic(object):
                 sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_BATTERY])
                 sub_obs = Variable(torch.Tensor(sub_obs), requires_grad=False)
                 sub_obs = torch.unsqueeze(sub_obs,0)
-                actions['battery'] = a.step(sub_obs, explore = explore).data.numpy()
+                actions['battery'] = a.step(sub_obs, explore = explore, to_gpu = to_gpu).data.cpu().numpy()
             elif a.name == "watertank":
                 sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_WATERTANK])
                 sub_obs = Variable(torch.Tensor(sub_obs),requires_grad = False)
                 sub_obs = torch.unsqueeze(sub_obs,0)
-                actions['watertank'] = a.step(sub_obs, explore = explore).data.numpy()
+                actions['watertank'] = a.step(sub_obs, explore = explore, to_gpu = to_gpu).data.cpu().numpy()
             elif a.name == "chp":
                 sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_CHP])
                 sub_obs = Variable(torch.Tensor(sub_obs),requires_grad = False)
                 sub_obs = torch.unsqueeze(sub_obs,0)
-                actions['chp'] = a.step(sub_obs, explore = explore).data.numpy()
+                actions['chp'] = a.step(sub_obs, explore = explore, to_gpu = to_gpu).data.cpu().numpy()
             elif a.name == "boiler":
                 sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_BOILER])
                 sub_obs = Variable(torch.Tensor(sub_obs),requires_grad = False)
                 sub_obs = torch.unsqueeze(sub_obs,0)
-                actions['boiler'] = a.step(sub_obs, explore = explore).data.numpy()
+                actions['boiler'] = a.step(sub_obs, explore = explore, to_gpu = to_gpu).data.cpu().numpy()
             else:
                 raise Exception("请检查智能体名称！")
 
@@ -116,10 +116,10 @@ class Actor_Attention_Critic(object):
             if soft:
                 target_q -= log_pi / self.reward_scale
             q_loss += MSELoss(pq, target_q.detach())
-            for reg in regs:
-                q_loss += reg  # regularizing attention
+            # for reg in regs:
+            #     q_loss += reg  # regularizing attention
         q_loss.backward()
-        self.critic.scale_shared_grads()
+        self.critic.scale_shared_grads()   
         grad_norm = torch.nn.utils.clip_grad_norm_(
             self.critic.parameters(), 10 * self.nagents)
         self.critic_optimizer.step()

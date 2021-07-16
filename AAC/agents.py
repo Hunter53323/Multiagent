@@ -27,7 +27,7 @@ class AttentionAgent(object):
         self.policy_optimizer = Adam(self.policy.parameters(), lr=lr)
         self.name = agent_name
 
-    def step(self, obs, explore=False):
+    def step(self, obs, explore=False, to_gpu = False):
         """
         Take a step forward in environment for a minibatch of observations
         Inputs:
@@ -36,6 +36,7 @@ class AttentionAgent(object):
         Outputs:
             action (PyTorch Variable): Actions for this agent
         """
+        if to_gpu:  obs = obs.cuda()
         return self.policy(obs, sample=explore)
 
     def get_params(self):
