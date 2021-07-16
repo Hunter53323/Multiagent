@@ -29,6 +29,7 @@ class Actor(nn.Module):
         x = self.out(x)
         x = torch.tanh(x)
         _ , idx = x[0].max(0) #21个动作里面取最大的一个
+        return 0
         #TODO: 要对batchsize取平均，这个不能忘
         x[:, :] = 0
         x[:, idx] = 1

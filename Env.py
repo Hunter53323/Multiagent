@@ -7,7 +7,6 @@ from gym.utils import seeding
 import numpy as np
 from Agent import Battery, WaterTank, CHP, Boiler, User, SolarPanel
 import defination
-#TODO： 考虑四个reward是不是可以独立出来进行处理
 
 class Multiagent_energy(gym.Env):
 
@@ -108,7 +107,6 @@ class Multiagent_energy(gym.Env):
         # return self.observation, reward, done, render_list
 
     def step(self, actions):
-        #TODO 热的消耗关系不太对，需要查一下
         assert self.not_done, "24个时刻已经运行结束，请重置环境！"
         solar_generate_elec = self.panels[0].generate(self.current_time_period)
         for key, value in actions.items():

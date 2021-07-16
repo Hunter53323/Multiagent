@@ -29,7 +29,7 @@ def normal_discrete(mean, var, action_space, low, high):
     action_list[random_action] = 1
     return action_list
 def main():
-    Log = Mylogger("MAAC_data_no_attention_real")
+    Log = Mylogger("MAAC_data")
     # Log = Mylogger("MAAC_data")
     env = Env.Multiagent_energy()
     model = Actor_Attention_Critic.init_from_env(env, q_lr=0.001)

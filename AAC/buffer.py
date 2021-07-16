@@ -3,8 +3,8 @@ from torch import Tensor
 from torch.autograd import Variable
 import defination
 
-# MEMORY_CAPACITY = 3000
-MEMORY_CAPACITY = 10000
+MEMORY_CAPACITY = 3000
+# MEMORY_CAPACITY = 10000
 class ReplayBuffer(object):
     """
     Replay Buffer for multi-agent RL with parallel rollouts

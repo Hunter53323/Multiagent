@@ -38,7 +38,7 @@ class Battery(BaseAgent):
         self.observation_space = spaces.Discrete(3)
 
         #常数定义
-        self.max_electricity = 4
+        self.max_electricity = 4.0
         self.min_electricity = 0.0
         self.charge_discharge_max = 1 
         # self.eta = 0.98
@@ -98,7 +98,7 @@ class Battery(BaseAgent):
         #环境的render模块里面调用输出相应的数据
         pass
 
-class WaterTank(BaseAgent):
+class WaterTank(BaseAgent):#电池的买卖充放分成两个动作
     def __init__(self):
         super().__init__(name = "watertank")
         self.heat = 3
@@ -109,7 +109,7 @@ class WaterTank(BaseAgent):
         self.observation_space = spaces.Discrete(2)
 
         #常数定义
-        self.max_heat = 4
+        self.max_heat = 4.0
         self.min_heat = 0.0
         self.heat_get_release_max = 1
 
@@ -233,7 +233,7 @@ class User(BaseAgent):
         elec1 = [1.5, 1.4, 1.4, 1.3, 1.3, 1.4, 1.5, 1.6, 1.6, 1.7, 1.7, 1.7, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.7, 1.5]
         elec2 = [1.4, 1.3, 1.3, 1.3, 1.3, 1.4, 1.5, 1.6, 1.6, 1.7, 1.7, 1.8, 1.9, 2.0, 2.1, 2.1, 2.1, 2.1, 2.1, 2.0, 2.0, 1.9, 1.8, 1.6]
         elec3 = [1.5, 1.4, 1.4, 1.3, 1.3, 1.3, 1.3, 1.4, 1.5, 1.6, 1.8, 1.9, 2.0, 2.1, 2.1, 2.2, 2.2, 2.2, 2.2, 2.1, 2.0, 2.0, 1.8, 1.7]
-        self.elec_demand_fixed = [sum(i,j,k) for i,j,k in zip(elec1, elec2, elec3)]
+        self.elec_demand_fixed = [i+j+k for i,j,k in zip(elec1, elec2, elec3)]
         self.heat_demand_fixed = [round(0.5*i,1) for i in self.elec_demand_fixed]
 
         #确保需求和评判按照顺序执行
@@ -288,7 +288,7 @@ class User(BaseAgent):
         elec_satisfaction = max(2*(electricity_provide - self.electricity_demand), 1 * (self.electricity_demand - electricity_provide))
         heat_satisfaction = max(2*(heat_provide - self.heat_demand), 1 * (self.heat_demand - heat_provide))
         #满意度的初始值和test模式中智能体的个数有关
-        satisfaction = factor * (4 - heat_satisfaction - elec_satisfaction)
+        satisfaction = factor * (10 - heat_satisfaction - elec_satisfaction)
         return satisfaction, extra_heat, extra_elec
 
     def reset(self):
@@ -299,11 +299,13 @@ class User(BaseAgent):
 class SolarPanel(BaseAgent):
     def __init__(self):
         super().__init__(name = "solarpanel")
+        self.soalr_generate = [0, 0, 0, 0, 0, 0.4, 0.9, 1.2, 1.4, 1.5, 1.5, 1.5, 1.5, 1.4, 1.3, 1.3, 1.1, 0.7, 0.2, 0, 0, 0, 0, 0]
 
     def generate(self, time):
-        if time < 5 or time > 19:
-            return 0.0
-        generate_elec = round(random.randint(7 - abs(time - 12), 10 - abs(time - 12))/10.0, 2)
+        # if time < 5 or time > 19:
+        #     return 0.0
+        # generate_elec = round(random.randint(7 - abs(time - 12), 10 - abs(time - 12))/10.0, 2)
+        generate_elec = self.soalr_generate[time]
         return generate_elec
 
     def generate_norandom(self, time):
