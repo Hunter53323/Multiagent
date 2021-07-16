@@ -38,10 +38,10 @@ class Battery(BaseAgent):
         self.observation_space = spaces.Discrete(3)
 
         #常数定义
-        self.max_electricity = 10
+        self.max_electricity = 4
         self.min_electricity = 0.0
-        self.charge_discharge_max = 10
-        self.eta = 0.98
+        self.charge_discharge_max = 1 
+        # self.eta = 0.98
 
     def _judge_constraint(self):
         if (self.electricity > self.max_electricity) \
@@ -87,6 +87,8 @@ class Battery(BaseAgent):
         return charge_number, sell_number
 
     def get_other_electricity(self, elec):
+        if elec > self.charge_discharge_max:
+            return {'battery_electricity':self.electricity + elec}, -10000
         self.electricity = round(self.electricity + elec - 0.1, 2)
         reward = self._judge_constraint()
         battery_electricity = {'battery_electricity':self.electricity}
@@ -107,12 +109,14 @@ class WaterTank(BaseAgent):
         self.observation_space = spaces.Discrete(2)
 
         #常数定义
-        self.max_heat = 10
+        self.max_heat = 4
         self.min_heat = 0.0
-        self.heat_release_max = 10
+        self.heat_get_release_max = 1
 
     def get_other_heat(self, heat_output):
         #输入其他智能体的热量
+        if heat_output > self.heat_get_release_max:
+            return {'watertank_heat': self.heat + heat_output}, -10000
         self.heat = round(self.heat + heat_output - 0.1, 2)
         reward = self._judge_constraint()
         watertank_heat = {'watertank_heat': self.heat}
@@ -151,24 +155,26 @@ class CHP(BaseAgent):
     def __init__(self):
         super().__init__(name = "chp")
         
-        #动作空间为买气量从0-1
-        self.action_space = spaces.Discrete(11)
+        #动作空间为c产生量从0-2
+        self.action_space = spaces.Discrete(41)
         #该智能体能观测到的观测空间为当前电、气价、用户热和电需求
         self.observation_space = spaces.Discrete(4)
 
         #常数定义
         self.max_generate_speed = 2
+        self.generate_ratio = 0.35
 
     def step(self, action):
         action = np.argmax(action)
         err_msg = "%r (%s) invalid" % (action, type(action))
         assert self.action_space.contains(action), err_msg
 
-        gas_consumption = round(action / 10.0,2)
-        electricity_generate, heat_generate = self._generate_heat_and_electricity(gas_consumption)
+        electricity_generate, heat_generate = round(action / 10.0,2), round(action / 10.0,2)
+        gas_consumption = round(action / (10.0*self.generate_ratio), 2)
+        # electricity_generate, heat_generate = self._generate_heat_and_electricity(gas_consumption)
 
         CHP_observation = {"CHP_electricity_generate": electricity_generate, "CHP_heat_generate": heat_generate}
-        reward = 0#TODO:reward考虑如何计算
+        reward = 0
         return CHP_observation, gas_consumption, reward 
  
 
@@ -178,19 +184,19 @@ class CHP(BaseAgent):
         
 
     def _generate_heat_and_electricity(self, gas):
-        return round(0.35*gas,2), round(0.35*gas,2)
+        return round(self.generate_ratio*gas,1), round(self.generate_ratio*gas,1)
 
-class Boiler(BaseAgent):
+class Boiler(BaseAgent):#TODO:锅炉的参数确定
     def __init__(self):
         super().__init__(name="boiler")
         
         #产热从0-1
-        self.action_space = spaces.Discrete(11)
+        self.action_space = spaces.Discrete(41)
         #该智能体能观测到的观测空间为当前气价、用户需求
         self.observation_space = spaces.Discrete(2)
 
         #常数定义
-        self.max_generate_speed = 2
+        # self.max_generate_speed = 2
 
     def step(self, action):
         action = np.argmax(action)
@@ -224,6 +230,12 @@ class User(BaseAgent):
         self.gas_demand_max = 1
         self.heat_demand_max = 1
 
+        elec1 = [1.5, 1.4, 1.4, 1.3, 1.3, 1.4, 1.5, 1.6, 1.6, 1.7, 1.7, 1.7, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.7, 1.5]
+        elec2 = [1.4, 1.3, 1.3, 1.3, 1.3, 1.4, 1.5, 1.6, 1.6, 1.7, 1.7, 1.8, 1.9, 2.0, 2.1, 2.1, 2.1, 2.1, 2.1, 2.0, 2.0, 1.9, 1.8, 1.6]
+        elec3 = [1.5, 1.4, 1.4, 1.3, 1.3, 1.3, 1.3, 1.4, 1.5, 1.6, 1.8, 1.9, 2.0, 2.1, 2.1, 2.2, 2.2, 2.2, 2.2, 2.1, 2.0, 2.0, 1.8, 1.7]
+        self.elec_demand_fixed = [sum(i,j,k) for i,j,k in zip(elec1, elec2, elec3)]
+        self.heat_demand_fixed = [round(0.5*i,1) for i in self.elec_demand_fixed]
+
         #确保需求和评判按照顺序执行
         self.process = 0
 
@@ -236,13 +248,13 @@ class User(BaseAgent):
     def generate_demand_fixed(self, ctime):
         assert self.process == 0, "请先将上一步的生成需求进行满意度评判"
         self.process = 1
-
-        elec_demand_fixed = [0.1, 0.2, 0.3, 0.4, 0.5, 0.8, 0.7, 1.0, 0.6, 0.5, 0.4, 0.4, 1.0, 0.8, 0.8, 0.7, 0.6, 0.2, 0.4, 0.3, 0.5, 0.3, 0.1, 0.4]
-        heat_demand_fixed = [0.3, 0.5, 0.4, 0.6, 0.2, 0.3, 0.1, 0.7, 0.3, 1.0, 0.4, 0.2, 1.0, 0.2, 0.7 , 0.6, 0.7, 0.5, 0.5, 0.5, 0.3, 0.2, 0.7, 0.5]
+        # elec_demand_fixed = [0.1, 0.2, 0.3, 0.4, 0.5, 0.8, 0.7, 1.0, 0.6, 0.5, 0.4, 0.4, 1.0, 0.8, 0.8, 0.7, 0.6, 0.2, 0.4, 0.3, 0.5, 0.3, 0.1, 0.4]
+        # heat_demand_fixed = [0.3, 0.5, 0.4, 0.6, 0.2, 0.3, 0.1, 0.7, 0.3, 1.0, 0.4, 0.2, 1.0, 0.2, 0.7 , 0.6, 0.7, 0.5, 0.5, 0.5, 0.3, 0.2, 0.7, 0.5]
+        
         demand = {}
         self.gas_demand = 0
-        self.heat_demand = heat_demand_fixed[ctime]
-        self.electricity_demand = elec_demand_fixed[ctime]
+        self.heat_demand = self.heat_demand_fixed[ctime]
+        self.electricity_demand = self.elec_demand_fixed[ctime]
         demand['electricity_demand'] = self.electricity_demand
         demand['gas_demand'] = self.gas_demand
         demand['heat_demand'] = self.heat_demand
@@ -282,6 +294,7 @@ class User(BaseAgent):
     def reset(self):
         self.process = 0
         return self.generate_demand_fixed(0)
+        # return self.generate_demand()
 
 class SolarPanel(BaseAgent):
     def __init__(self):
