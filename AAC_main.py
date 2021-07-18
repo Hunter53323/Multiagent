@@ -32,7 +32,7 @@ def main():
     Log = Mylogger("MAAC_data")
     # Log = Mylogger("MAAC_data")
     env = Env.Multiagent_energy()
-    model = Actor_Attention_Critic.init_from_env(env, q_lr=0.001)
+    model = Actor_Attention_Critic.init_from_env(env, q_lr=0.001)#, critic_hidden_dim = 256, pol_hidden_dim= 256)
     replay_buffer = myBuffer(buffer_length, model.nagents,
                                  [obsp for obsp in env.observation_space.values()],
                                  [acsp for acsp in env.action_space.values()])
@@ -65,7 +65,7 @@ def main():
             replay_buffer.push(s, a, r , s_, done) # store the transition to memory
 
             if replay_buffer.pointer > buffer.MEMORY_CAPACITY:
-                var *= 0.995
+                var *= 0.9995
                 # model.prep_training(device='gpu')
                 sample = replay_buffer.sample(BATCH_SIZE, to_gpu=useGPU)
                 model.learn(sample, logger=Log.logger, device = 'gpu')
@@ -90,7 +90,7 @@ def main():
             if done:
                 if ep_r > 0:
                     Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
-                print("error")
+                print("errorEpisode: ", i, ' Reward: %i' % (ep_r))
                 break
         i += 1
     print('Running time: ', time.time() - t1)

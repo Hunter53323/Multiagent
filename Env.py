@@ -123,14 +123,14 @@ class Multiagent_energy(gym.Env):
         total_electricity_generate = round(solar_generate_elec - min(battery_charge_number, 0) + chp_observation["CHP_electricity_generate"],2)
         total_heat_generate = round(boiler_heat_generate["boiler_heat_generate"] + watertank_release + chp_observation["CHP_heat_generate"],2)
 
-        satisfaction, extra_heat, extra_elec = self.users[0].judge_satisfaction(total_electricity_generate, total_heat_generate, self.satisfactory_factor)
+        satisfaction, extra_heat, extra_elec, less_heat, less_elec = self.users[0].judge_satisfaction(total_electricity_generate, total_heat_generate, self.satisfactory_factor)
         # 生产的电和热供给用户之后余量生成新的电池和水箱容量
         # if battery_charge_number < 0:
         #     extra_elec = -0.1#TODO:放电的最终判断有些问题
         battery_electricity, battery_punish = self.agents[0].get_other_electricity(extra_elec)
         watertank_heat, watertank_punish = self.agents[1].get_other_heat(extra_heat)
         # 总成本
-        cost_all = self._cal_costs(max(0,battery_charge_number), chp_gas_consumption + boiler_gas_consumption)
+        cost_all = self._cal_costs(max(0,battery_charge_number) + less_elec, chp_gas_consumption + boiler_gas_consumption + less_heat)
         # cost_all = 0  #TODO：特殊条件处理
         #惩罚
         punish = self._cal_punish(battery_punish, watertank_punish, chp_punish, boiler_punish)
@@ -153,7 +153,8 @@ class Multiagent_energy(gym.Env):
         if done:
             self.not_done = False
         render_list = {"battery_charge_number":battery_charge_number, "battery_sell_number":battery_sell_number, "watertank_release":watertank_release, "boiler_gas_consumption":boiler_gas_consumption, "solar_generate_elec":solar_generate_elec}
-        
+        render_list["boiler_additional"] = less_heat
+        render_list["buy_elec_additional"] = less_elec
         cost_and_earning_dict = {"cost":cost_all, "earning":earnings, "elec_generate":total_electricity_generate, "heat_generate":total_heat_generate}
         self.save(merge(render_list, self.observation, cost_and_earning_dict))
 

@@ -52,7 +52,27 @@ class Battery(BaseAgent):
             reward = 0
         return reward
 
+    # def step(self, action):
+    #     action = np.argmax(action)
+    #     err_msg = "%r (%s) invalid" % (action, type(action))
+    #     assert self.action_space.contains(action), err_msg
+    #     #将动作映射成具体的充放电数据
+    #     charge_number, sell_number = self._get_charge_number(action)
+    #     old_elec = self.electricity
+    #     self.electricity = round(self.electricity + charge_number - sell_number,2)
+    #     #电量约束,超出约束则给予惩罚
+    #     reward = self._judge_constraint()
+    #     if reward < 0 and sell_number == 0 and self.electricity == 0:
+    #         charge_number = round(-old_elec,2)
+    #     elif reward < 0 and charge_number == 0:
+    #         sell_number = round(old_elec,2)
+
+    #     battery_electricity = {'battery_electricity':self.electricity}
+    #     return battery_electricity, charge_number, reward, sell_number
+
     def step(self, action):
+        release_action = action[0]
+
         action = np.argmax(action)
         err_msg = "%r (%s) invalid" % (action, type(action))
         assert self.action_space.contains(action), err_msg
@@ -98,7 +118,7 @@ class Battery(BaseAgent):
         #环境的render模块里面调用输出相应的数据
         pass
 
-class WaterTank(BaseAgent):#电池的买卖充放分成两个动作
+class WaterTank(BaseAgent):#TODO:电池的买卖充放分成两个动作
     def __init__(self):
         super().__init__(name = "watertank")
         self.heat = 3
@@ -234,7 +254,8 @@ class User(BaseAgent):
         elec2 = [1.4, 1.3, 1.3, 1.3, 1.3, 1.4, 1.5, 1.6, 1.6, 1.7, 1.7, 1.8, 1.9, 2.0, 2.1, 2.1, 2.1, 2.1, 2.1, 2.0, 2.0, 1.9, 1.8, 1.6]
         elec3 = [1.5, 1.4, 1.4, 1.3, 1.3, 1.3, 1.3, 1.4, 1.5, 1.6, 1.8, 1.9, 2.0, 2.1, 2.1, 2.2, 2.2, 2.2, 2.2, 2.1, 2.0, 2.0, 1.8, 1.7]
         self.elec_demand_fixed = [i+j+k for i,j,k in zip(elec1, elec2, elec3)]
-        self.heat_demand_fixed = [round(0.5*i,1) for i in self.elec_demand_fixed]
+        # self.elec_demand_fixed = [round(i+j,2) for i,j in zip(elec1, elec2)]
+        self.heat_demand_fixed = [round(0.5*i,2) for i in self.elec_demand_fixed]
 
         #确保需求和评判按照顺序执行
         self.process = 0
@@ -285,11 +306,13 @@ class User(BaseAgent):
         self.process = 0
         extra_heat = max(0, heat_provide - self.heat_demand)
         extra_elec = max(0, electricity_provide - self.electricity_demand)
-        elec_satisfaction = max(2*(electricity_provide - self.electricity_demand), 1 * (self.electricity_demand - electricity_provide))
-        heat_satisfaction = max(2*(heat_provide - self.heat_demand), 1 * (self.heat_demand - heat_provide))
+        less_heat = max(0, self.heat_demand - heat_provide)
+        less_elec = max(0, self.electricity_demand - electricity_provide)
+        elec_satisfaction = max(2*(electricity_provide - self.electricity_demand), 0)
+        heat_satisfaction = max(4*(heat_provide - self.heat_demand), 4 * (self.heat_demand - heat_provide))
         #满意度的初始值和test模式中智能体的个数有关
         satisfaction = factor * (10 - heat_satisfaction - elec_satisfaction)
-        return satisfaction, extra_heat, extra_elec
+        return satisfaction, extra_heat, extra_elec, less_heat, less_elec
 
     def reset(self):
         self.process = 0
