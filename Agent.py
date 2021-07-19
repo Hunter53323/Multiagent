@@ -72,6 +72,7 @@ class Battery(BaseAgent):
 
     def step(self, action):
         release_action = action[0]
+        #充放买卖独立出来
 
         action = np.argmax(action)
         err_msg = "%r (%s) invalid" % (action, type(action))
