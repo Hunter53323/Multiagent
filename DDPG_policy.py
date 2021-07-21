@@ -6,15 +6,15 @@ import torch.nn.functional as F
 import numpy as np
 import defination
 
-LR_ACTOR = 0.001
-LR_CRITIC = 0.002
+LR_ACTOR = 0.0001
+LR_CRITIC = 0.0001
 GAMMA = 0.9
 TAU = 0.01
 # MEMORY_CAPACITY = 3000
-MEMORY_CAPACITY = 5000
+MEMORY_CAPACITY = 32
 BATCH_SIZE = 32   #暂时应该给的小一点
 
-K = 300
+K = 256
 #隐藏层维数为300时收敛会快很多
 class Actor(nn.Module):
     def __init__(self, s_dim, a_dim):
@@ -28,9 +28,14 @@ class Actor(nn.Module):
         x = F.relu(x)
         x = self.out(x)
         x = torch.tanh(x)
-        _ , idx = x[0].max(0) #21个动作里面取最大的一个
-        return 0
-        #TODO: 要对batchsize取平均，这个不能忘
+        # _ , idx = x[0].max(0) #21个动作里面取最大的一个
+        count = None
+        for i in x:
+            if count == None:
+                count = i
+            else:
+                count += i
+        _, idx = count.max(0)
         x[:, :] = 0
         x[:, idx] = 1
         return x.detach()[0] #type:tensor([k])
@@ -40,7 +45,6 @@ class Actor(nn.Module):
         x = F.relu(x)
         x = self.out(x)
         x = torch.tanh(x)
-        _ , idx = x[0].max(0) #21个动作里面取最大的一个
         # x[:, :] = 0
         # x[:, idx] = 1
         return x #type:tensor([k])
@@ -93,6 +97,25 @@ class MADDPG():
                 raise Exception("请检查智能体名称！")
         return actions
 
+    # def choose_action(self, obs):
+    #     actions = {}
+    #     for agent in self.DDPGs:
+    #         if agent.name == "battery":
+    #             sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION])
+    #             actions['battery'] = agent.choose_action(sub_obs)
+    #         elif agent.name == "watertank":
+    #             sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION])
+    #             actions['watertank'] = agent.choose_action(sub_obs)
+    #         elif agent.name == "chp":
+    #             sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION])
+    #             actions['chp'] = agent.choose_action(sub_obs)
+    #         elif agent.name == "boiler":
+    #             sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION])
+    #             actions['boiler'] = agent.choose_action(sub_obs)
+    #         else:
+    #             raise Exception("请检查智能体名称！")
+    #     return actions
+
     def store_transition(self, s_critic, a, r, s__critic):
         self.pointer += 1
         for agent in self.DDPGs:
@@ -137,6 +160,24 @@ class DDPG(object):
             raise Exception("请正确使用格式化函数！")
 
         return s, s_
+
+    # def _formatting(self, s_critic, s__critic):
+    #     if self.name == "battery":
+    #         s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION}
+    #         s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION}
+    #     elif self.name == "watertank":
+    #         s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION}
+    #         s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION}
+    #     elif self.name == "chp":
+    #         s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION}
+    #         s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION}
+    #     elif self.name == "boiler":
+    #         s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION}
+    #         s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION}
+    #     else:
+    #         raise Exception("请正确使用格式化函数！")
+
+    #     return s, s_
 
     def store_transition(self, s_critic, a, r, s__critic): # how to store the episodic data to buffer
         """

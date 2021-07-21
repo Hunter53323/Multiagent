@@ -141,8 +141,8 @@ class Multiagent_energy(gym.Env):
         #当前时刻前进到下一个时刻
         self.current_time_period += 1
         done = bool(
-            self.current_time_period >= 23 or
-            punish < -5000 #done的新步骤
+            self.current_time_period >= 23
+            or punish < -5000 #done的新步骤
         )
         punish = max(punish, -100)  #惩罚不给加
         reward = self.calculate_reward(cost_all, satisfaction, earnings, punish)
@@ -153,8 +153,8 @@ class Multiagent_energy(gym.Env):
         if done:
             self.not_done = False
         render_list = {"battery_charge_number":battery_charge_number, "battery_sell_number":battery_sell_number, "watertank_release":watertank_release, "boiler_gas_consumption":boiler_gas_consumption, "solar_generate_elec":solar_generate_elec}
-        render_list["boiler_additional"] = less_heat
-        render_list["buy_elec_additional"] = less_elec
+        render_list["boiler_additional"] = round(less_heat,2)
+        render_list["buy_elec_additional"] = round(less_elec,2)
         cost_and_earning_dict = {"cost":cost_all, "earning":earnings, "elec_generate":total_electricity_generate, "heat_generate":total_heat_generate}
         self.save(merge(render_list, self.observation, cost_and_earning_dict))
 

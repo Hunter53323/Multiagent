@@ -3,8 +3,7 @@ from torch import Tensor
 from torch.autograd import Variable
 import defination
 
-MEMORY_CAPACITY = 1000
-# MEMORY_CAPACITY = 10000
+MEMORY_CAPACITY = 3000
 class ReplayBuffer(object):
     """
     Replay Buffer for multi-agent RL with parallel rollouts
@@ -26,11 +25,11 @@ class ReplayBuffer(object):
         self.next_obs_buffs = []
         self.done_buffs = []
         for odim, adim in zip(obs_dims, ac_dims):
-            self.obs_buffs.append(np.zeros((max_steps, odim), dtype=np.float32))
-            self.ac_buffs.append(np.zeros((max_steps, adim), dtype=np.float32))
-            self.rew_buffs.append(np.zeros(max_steps, dtype=np.float32))
-            self.next_obs_buffs.append(np.zeros((max_steps, odim), dtype=np.float32))
-            self.done_buffs.append(np.zeros(max_steps, dtype=np.uint8))
+            self.obs_buffs.append(np.zeros((max_steps, odim)))
+            self.ac_buffs.append(np.zeros((max_steps, adim)))
+            self.rew_buffs.append(np.zeros(max_steps))
+            self.next_obs_buffs.append(np.zeros((max_steps, odim)))
+            self.done_buffs.append(np.zeros(max_steps))
 
 
         self.filled_i = 0  # index of first empty location in buffer (last index when full)
@@ -40,7 +39,7 @@ class ReplayBuffer(object):
         return self.filled_i
 
     def push(self, observations, actions, rewards, next_observations, dones):
-        nentries = 1  # handle multiple parallel environments
+        nentries = observations.shape[0]  # handle multiple parallel environments
         if self.curr_i + nentries > self.max_steps:
             rollover = self.max_steps - self.curr_i # num of indices to roll over
             for agent_i in range(self.num_agents):
@@ -73,7 +72,7 @@ class ReplayBuffer(object):
 
     def sample(self, N, to_gpu=False, norm_rews=True):
         inds = np.random.choice(np.arange(self.filled_i), size=N,
-                                replace=True)
+                                replace=False)
         if to_gpu:
             cast = lambda x: Variable(Tensor(x), requires_grad=False).cuda()
         else:

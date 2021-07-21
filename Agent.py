@@ -110,7 +110,8 @@ class Battery(BaseAgent):
     def get_other_electricity(self, elec):
         if elec > self.charge_discharge_max:
             return {'battery_electricity':self.electricity + elec}, -10000
-        self.electricity = round(self.electricity + elec - 0.1, 2)
+        # self.electricity = round(self.electricity + elec - 0.1, 2)
+        self.electricity = round(self.electricity + elec, 2)
         reward = self._judge_constraint()
         battery_electricity = {'battery_electricity':self.electricity}
         return battery_electricity, reward
@@ -138,7 +139,8 @@ class WaterTank(BaseAgent):#TODO:电池的买卖充放分成两个动作
         #输入其他智能体的热量
         if heat_output > self.heat_get_release_max:
             return {'watertank_heat': self.heat + heat_output}, -10000
-        self.heat = round(self.heat + heat_output - 0.1, 2)
+        # self.heat = round(self.heat + heat_output - 0.1, 2)
+        self.heat = round(self.heat + heat_output, 2)
         reward = self._judge_constraint()
         watertank_heat = {'watertank_heat': self.heat}
         return watertank_heat, reward
@@ -256,7 +258,7 @@ class User(BaseAgent):
         elec3 = [1.5, 1.4, 1.4, 1.3, 1.3, 1.3, 1.3, 1.4, 1.5, 1.6, 1.8, 1.9, 2.0, 2.1, 2.1, 2.2, 2.2, 2.2, 2.2, 2.1, 2.0, 2.0, 1.8, 1.7]
         self.elec_demand_fixed = [i+j+k for i,j,k in zip(elec1, elec2, elec3)]
         # self.elec_demand_fixed = [round(i+j,2) for i,j in zip(elec1, elec2)]
-        self.heat_demand_fixed = [round(0.5*i,2) for i in self.elec_demand_fixed]
+        self.heat_demand_fixed = [round(0.5*i,1) for i in self.elec_demand_fixed]
 
         #确保需求和评判按照顺序执行
         self.process = 0
@@ -275,8 +277,8 @@ class User(BaseAgent):
         
         demand = {}
         self.gas_demand = 0
-        self.heat_demand = self.heat_demand_fixed[ctime]
-        self.electricity_demand = self.elec_demand_fixed[ctime]
+        self.heat_demand = round(self.heat_demand_fixed[ctime],2)
+        self.electricity_demand = round(self.elec_demand_fixed[ctime],2)
         demand['electricity_demand'] = self.electricity_demand
         demand['gas_demand'] = self.gas_demand
         demand['heat_demand'] = self.heat_demand
