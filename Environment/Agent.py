@@ -30,9 +30,7 @@ class BaseAgent():
 class Battery(BaseAgent):
     def __init__(self):
         super().__init__(name = "battery")
-        self.init_elec = 2
-        self.electricity = self.init_elec
-        # self.electricity = 2 #DDPG电池初始电量给低
+        self.electricity = 3
         #动作空间有无动作、充放电0-1、卖电0-1
         self.action_space = spaces.Discrete(31)
         #当前电量状态为满电的百分比,一维
@@ -95,7 +93,7 @@ class Battery(BaseAgent):
 
 
     def reset(self):
-        self.electricity = self.init_elec
+        self.electricity = 3.0
 
         battery_electricity = {'battery_electricity':self.electricity}
         return battery_electricity
@@ -165,8 +163,8 @@ class WaterTank(BaseAgent):#TODO:电池的买卖充放分成两个动作
         self.heat = self.heat - release_number
         #热量约束，超出约束则给予惩罚
         reward = self._judge_constraint()
-        # if reward < 0:
-        #     release_number = self.heat + release_number
+        if reward < 0:
+            release_number = self.heat + release_number
 
         watertank_heat = {'watertank_heat': self.heat}
         return watertank_heat, release_number, reward
@@ -180,7 +178,7 @@ class CHP(BaseAgent):
     def __init__(self):
         super().__init__(name = "chp")
         
-        #动作空间为c产生量从0-4
+        #动作空间为c产生量从0-2
         self.action_space = spaces.Discrete(41)
         #该智能体能观测到的观测空间为当前电、气价、用户热和电需求
         self.observation_space = spaces.Discrete(4)
@@ -278,14 +276,9 @@ class User(BaseAgent):
         # heat_demand_fixed = [0.3, 0.5, 0.4, 0.6, 0.2, 0.3, 0.1, 0.7, 0.3, 1.0, 0.4, 0.2, 1.0, 0.2, 0.7 , 0.6, 0.7, 0.5, 0.5, 0.5, 0.3, 0.2, 0.7, 0.5]
         
         demand = {}
-        if ctime<24:
-            self.gas_demand = 0
-            self.heat_demand = round(self.heat_demand_fixed[ctime],2)
-            self.electricity_demand = round(self.elec_demand_fixed[ctime],2)
-        elif ctime == 24:
-            self.heat_demand = 0
-            self.elec_demand = 0
-            self.gas_damand = 0
+        self.gas_demand = 0
+        self.heat_demand = round(self.heat_demand_fixed[ctime],2)
+        self.electricity_demand = round(self.elec_demand_fixed[ctime],2)
         demand['electricity_demand'] = self.electricity_demand
         demand['gas_demand'] = self.gas_demand
         demand['heat_demand'] = self.heat_demand
@@ -338,10 +331,7 @@ class SolarPanel(BaseAgent):
         # if time < 5 or time > 19:
         #     return 0.0
         # generate_elec = round(random.randint(7 - abs(time - 12), 10 - abs(time - 12))/10.0, 2)
-        if time == 24: 
-            generate_elec = 0
-        elif time<24:
-            generate_elec = self.soalr_generate[time]
+        generate_elec = self.soalr_generate[time]
         return generate_elec
 
     def generate_norandom(self, time):

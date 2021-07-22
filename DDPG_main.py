@@ -8,7 +8,7 @@ from logger import Mylogger
 import defination
 
 # EPISODES = 2000
-EP_STEPS = 23
+EP_STEPS = 24
 RENDER = False
 
 def normal_discrete(mean, var, action_space, low, high):
@@ -40,8 +40,8 @@ def main():
     s_dims = env.observation_space
     a_dims = {key:value for key, value in env.action_space.items()}
     #观测空间维数的更改
-    # for key in s_dims.keys():
-    #     s_dims[key] = len(defination.OBSERVATION)
+    for key in s_dims.keys():
+        s_dims[key] = len(defination.OBSERVATION)
     a_bounds = {key:value-1 for key, value in env.action_space.items()}
     a_low_bounds = {key:0  for key, value in env.action_space.items()}
 
@@ -84,12 +84,11 @@ def main():
                     except:
                         continue
                 print('Episode: ', i, ' Reward: %i' % (ep_r), 'Explore: %.2f' % var)
-                if ep_r > 0:Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
+                Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
                 #if ep_r > -300 : RENDER = True
                 break
             if done:
-                if ep_r > 0:
-                    Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
+                Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
                 print("errorEpisode: ", i, ' Reward: %i' % (ep_r))
                 break
     print('Running time: ', time.time() - t1)

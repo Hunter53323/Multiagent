@@ -10,7 +10,7 @@ from logger import Mylogger
 # EPISODES = 1000
 
 #buffer储存的时候优先存储reward更高的动作，进而进行学习
-EP_STEPS = 23
+EP_STEPS = 24
 RENDER = False
 BATCH_SIZE = 512#TODO:修正batch size
 useGPU = True
@@ -32,7 +32,7 @@ def main():
     Log = Mylogger("MAAC_data_no_attention")
     # Log = Mylogger("MAAC_data")
     env = Env.Multiagent_energy()
-    model = Actor_Attention_Critic.init_from_env(env, q_lr=0.001)#, critic_hidden_dim = 256, pol_hidden_dim= 256)
+    model = Actor_Attention_Critic.init_from_env(env, q_lr=0.0001, critic_hidden_dim = 256, pol_hidden_dim= 256)
     replay_buffer = myBuffer(buffer_length, model.nagents,
                                  [obsp for obsp in env.observation_space.values()],
                                  [acsp for acsp in env.action_space.values()])
@@ -55,6 +55,7 @@ def main():
         ep_r = 0
         model.prep_rollouts(device='gpu')
         for j in range(EP_STEPS):
+            
             a = model.step(s, to_gpu=useGPU)
             for key in a.keys():
                 a[key] = a[key][0]
@@ -62,7 +63,8 @@ def main():
                 action_space_list = np.array(range(env.action_space[key]))
                 a[key] = normal_discrete(value, var, action_space_list, a_low_bounds[key], a_bounds[key])
             s_, r, done, info = env.step(a)
-            replay_buffer.push(s, a, r , s_, done) # store the transition to memory
+            ep_r += r
+            replay_buffer.push(s, a, ep_r , s_, done) # store the transition to memory
 
             if replay_buffer.pointer > buffer.MEMORY_CAPACITY:
                 var *= 0.9995
@@ -72,13 +74,14 @@ def main():
                 model.prep_rollouts(device='gpu')
             # ep_rews = replay_buffer.get_average_rewards(EP_STEPS)
             s = s_
-            ep_r += r
+            
             if j == EP_STEPS - 1:
                 if (EPISODES == 3000) and (replay_buffer.pointer > buffer.MEMORY_CAPACITY):
                     EPISODES += i
                 print('Episode: ', i, ' Reward: %i' % (ep_r))
-                if ep_r > 0:
-                    Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
+                # if ep_r > 0:
+                #     Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
+                Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
                 if ep_r > max_reward:
                     best_actions = env.get_save()
                     max_reward = ep_r
@@ -89,8 +92,9 @@ def main():
                         continue
                 break
             if done:
-                if ep_r > 0:
-                    Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
+                # if ep_r > 0:
+                #     Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
+                Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
                 print("errorEpisode: ", i, ' Reward: %i' % (ep_r))
                 break
         i += 1

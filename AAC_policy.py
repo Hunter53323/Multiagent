@@ -113,13 +113,13 @@ class Actor_Attention_Critic(object):
             target_q = (rews[a_i].view(-1, 1) +
                         self.gamma * nq *
                         (1 - dones[a_i].view(-1, 1)))
-            if soft:
-                target_q -= log_pi / self.reward_scale
+            # if soft:
+            #     target_q -= log_pi / self.reward_scale
             q_loss += MSELoss(pq, target_q.detach())
-            for reg in regs:
-                q_loss += reg  # regularizing attention
+            # for reg in regs:
+            #     q_loss += reg  # regularizing attention
         q_loss.backward()
-        self.critic.scale_shared_grads()   
+        # self.critic.scale_shared_grads()   
         grad_norm = torch.nn.utils.clip_grad_norm_(
             self.critic.parameters(), 10 * self.nagents)
         self.critic_optimizer.step()

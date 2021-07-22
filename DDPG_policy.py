@@ -6,8 +6,8 @@ import torch.nn.functional as F
 import numpy as np
 import defination
 
-LR_ACTOR = 0.0001
-LR_CRITIC = 0.0001
+LR_ACTOR = 0.00001
+LR_CRITIC = 0.00002
 GAMMA = 0.9
 TAU = 0.01
 # MEMORY_CAPACITY = 3000
@@ -78,43 +78,43 @@ class MADDPG():
         self.DDPGs = [DDPG(a_dims[agent], s_dims[agent], s_dim_all, agent) for agent in agents]
         self.pointer = 0
 
-    def choose_action(self, obs):
-        actions = {}
-        for agent in self.DDPGs:
-            if agent.name == "battery":
-                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION_BATTERY])
-                actions['battery'] = agent.choose_action(sub_obs)
-            elif agent.name == "watertank":
-                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION_WATERTANK])
-                actions['watertank'] = agent.choose_action(sub_obs)
-            elif agent.name == "chp":
-                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION_CHP])
-                actions['chp'] = agent.choose_action(sub_obs)
-            elif agent.name == "boiler":
-                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION_BOILER])
-                actions['boiler'] = agent.choose_action(sub_obs)
-            else:
-                raise Exception("请检查智能体名称！")
-        return actions
-
     # def choose_action(self, obs):
     #     actions = {}
     #     for agent in self.DDPGs:
     #         if agent.name == "battery":
-    #             sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION])
+    #             sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION_BATTERY])
     #             actions['battery'] = agent.choose_action(sub_obs)
     #         elif agent.name == "watertank":
-    #             sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION])
+    #             sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION_WATERTANK])
     #             actions['watertank'] = agent.choose_action(sub_obs)
     #         elif agent.name == "chp":
-    #             sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION])
+    #             sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION_CHP])
     #             actions['chp'] = agent.choose_action(sub_obs)
     #         elif agent.name == "boiler":
-    #             sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION])
+    #             sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION_BOILER])
     #             actions['boiler'] = agent.choose_action(sub_obs)
     #         else:
     #             raise Exception("请检查智能体名称！")
     #     return actions
+
+    def choose_action(self, obs):
+        actions = {}
+        for agent in self.DDPGs:
+            if agent.name == "battery":
+                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION])
+                actions['battery'] = agent.choose_action(sub_obs)
+            elif agent.name == "watertank":
+                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION])
+                actions['watertank'] = agent.choose_action(sub_obs)
+            elif agent.name == "chp":
+                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION])
+                actions['chp'] = agent.choose_action(sub_obs)
+            elif agent.name == "boiler":
+                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION])
+                actions['boiler'] = agent.choose_action(sub_obs)
+            else:
+                raise Exception("请检查智能体名称！")
+        return actions
 
     def store_transition(self, s_critic, a, r, s__critic):
         self.pointer += 1
@@ -143,41 +143,41 @@ class DDPG(object):
         self.loss_func = nn.MSELoss()
         self.name = name
 
-    def _formatting(self, s_critic, s__critic):
-        if self.name == "battery":
-            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION_BATTERY}
-            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION_BATTERY}
-        elif self.name == "watertank":
-            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION_WATERTANK}
-            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION_WATERTANK}
-        elif self.name == "chp":
-            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION_CHP}
-            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION_CHP}
-        elif self.name == "boiler":
-            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION_BOILER}
-            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION_BOILER}
-        else:
-            raise Exception("请正确使用格式化函数！")
-
-        return s, s_
-
     # def _formatting(self, s_critic, s__critic):
     #     if self.name == "battery":
-    #         s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION}
-    #         s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION}
+    #         s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION_BATTERY}
+    #         s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION_BATTERY}
     #     elif self.name == "watertank":
-    #         s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION}
-    #         s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION}
+    #         s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION_WATERTANK}
+    #         s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION_WATERTANK}
     #     elif self.name == "chp":
-    #         s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION}
-    #         s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION}
+    #         s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION_CHP}
+    #         s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION_CHP}
     #     elif self.name == "boiler":
-    #         s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION}
-    #         s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION}
+    #         s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION_BOILER}
+    #         s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION_BOILER}
     #     else:
     #         raise Exception("请正确使用格式化函数！")
 
     #     return s, s_
+
+    def _formatting(self, s_critic, s__critic):
+        if self.name == "battery":
+            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION}
+            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION}
+        elif self.name == "watertank":
+            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION}
+            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION}
+        elif self.name == "chp":
+            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION}
+            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION}
+        elif self.name == "boiler":
+            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION}
+            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION}
+        else:
+            raise Exception("请正确使用格式化函数！")
+
+        return s, s_
 
     def store_transition(self, s_critic, a, r, s__critic): # how to store the episodic data to buffer
         """

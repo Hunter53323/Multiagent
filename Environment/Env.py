@@ -14,7 +14,7 @@ class Multiagent_energy(gym.Env):
         self.run_mode = mode
         #24个时间段的电价
         #self.electricity_price_all = [0.3,0.3,0.3,0.3,0.3,0.3,0.3,1,1,1,1,0.6,0.6,0.6,0.6,0.6,1,1,1,1,0.6,0.6,0.6,0.3]
-        self.electricity_price_all = [0.3,0.3,0.3,0.3,0.3,0.3,0.3,1.0,1.0,1.0,1.0,0.6,0.6,0.6,0.6,0.6,1.0,1.0,1.0,1.0,0.6,0.6,0.6,0.3,0]
+        self.electricity_price_all = [0.3,0.3,0.3,0.3,0.3,0.3,0.3,1.0,1.0,1.0,1.0,0.6,0.6,0.6,0.6,0.6,1.0,1.0,1.0,1.0,0.6,0.6,0.6,0.3]
 
         self.gas_price_all = 0.3
 
@@ -68,6 +68,44 @@ class Multiagent_energy(gym.Env):
     def _cal_punish(self, *punish):
         return sum(punish)
 
+    def step_boiler(self, actions):
+        assert self.not_done, "24个时刻已经运行结束，请重置环境！"
+        solar_generate_elec = self.panels[0].generate(self.current_time_period)
+        for key, value in actions.items():
+            if key == "battery":
+                battery_electricity, battery_charge_number, battery_punish, battery_sell_number = self.agents[0].step(value)
+            elif key == "watertank":
+                watertank_heat, watertank_release, watertank_punish = self.agents[1].step(value)
+            elif key == "chp":
+                chp_observation, chp_gas_consumption, chp_punish = self.agents[2].step(value)
+            elif key == "boiler":
+                boiler_heat_generate, boiler_gas_consumption, boiler_punish = self.agents[3].step(value)
+            else:
+                raise Exception("请检查智能体名称！")
+
+        satisfaction, extra_heat, extra_elec = self.users[0].judge_satisfaction(0, boiler_heat_generate["boiler_heat_generate"], self.satisfactory_factor)
+        # print(self.observation["heat_demand"], boiler_heat_generate["boiler_heat_generate"], satisfaction)
+        
+
+        #当前时刻前进到下一个时刻
+        self.current_time_period += 1
+        done = bool(
+            self.current_time_period >= 23
+        )
+        next_price = self._get_current_price()
+        next_demand = self._getdemand()
+        self.observation = merge(next_price, next_demand, battery_electricity, watertank_heat, chp_observation, boiler_heat_generate)
+
+        if done:
+            self.not_done = False
+        render_list = {"watertank_release":watertank_release, "boiler_gas_consumption":boiler_gas_consumption}
+        
+        cost_and_earning_dict = {"heat_generate":boiler_heat_generate["boiler_heat_generate"]}
+        self.save(merge(render_list, self.observation, cost_and_earning_dict))
+
+        return self.observation, satisfaction, done, {}
+        # return self.observation, reward, done, render_list
+
     def step(self, actions):
         assert self.not_done, "24个时刻已经运行结束，请重置环境！"
         solar_generate_elec = self.panels[0].generate(self.current_time_period)
@@ -103,11 +141,10 @@ class Multiagent_energy(gym.Env):
         #当前时刻前进到下一个时刻
         self.current_time_period += 1
         done = bool(
-            self.current_time_period >= 24
+            self.current_time_period >= 23
             or punish < -5000 #done的新步骤
         )
         punish = max(punish, -100)  #惩罚不给加
-        # satisfaction = 20
         reward = self.calculate_reward(cost_all, satisfaction, earnings, punish)
         next_price = self._get_current_price()
         next_demand = self._getdemand()
@@ -116,7 +153,7 @@ class Multiagent_energy(gym.Env):
         if done:
             self.not_done = False
         render_list = {"battery_charge_number":battery_charge_number, "battery_sell_number":battery_sell_number, "watertank_release":watertank_release, "boiler_gas_consumption":boiler_gas_consumption, "solar_generate_elec":solar_generate_elec}
-        render_list["buy_heat_additional"] = round(less_heat,2)
+        render_list["boiler_additional"] = round(less_heat,2)
         render_list["buy_elec_additional"] = round(less_elec,2)
         cost_and_earning_dict = {"cost":cost_all, "earning":earnings, "elec_generate":total_electricity_generate, "heat_generate":total_heat_generate}
         self.save(merge(render_list, self.observation, cost_and_earning_dict))

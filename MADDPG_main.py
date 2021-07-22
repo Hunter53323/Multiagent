@@ -11,7 +11,7 @@ import matplotlib as plt
 # EPISODES = 1000
 
 #buffer储存的时候优先存储reward更高的动作，进而进行学习
-EP_STEPS = 23
+EP_STEPS = 24
 RENDER = False
 BATCH_SIZE = 512#TODO:修正batch size
 useGPU = True
@@ -33,7 +33,7 @@ def normal_discrete(mean, var, action_space, low, high):
 def main():
     Log = Mylogger("MADDPG_data")
     env = Env.Multiagent_energy()
-    model = MADDPG.init_from_env(env, lr=0.0001, hidden_dim=256)
+    model = MADDPG.init_from_env(env, lr=0.001, hidden_dim=256)
     replay_buffer = myBuffer(buffer_length, model.nagents,
                                  [obsp for obsp in env.observation_space.values()],
                                  [acsp for acsp in env.action_space.values()])
