@@ -104,59 +104,36 @@ class myBuffer(ReplayBuffer):
         super().__init__(max_steps, num_agents, obs_dims, ac_dims)
         self.pointer = 0
 
-    def push(self, observations, actions, rewards, next_observations, dones):
+    def push(self, observations, actions, rewards, next_observations, dones, names):
         format_obs = []
-        tem = []
-        for i in defination.OBSERVATION_BATTERY:
-            tem.append(observations[i])
-        format_obs.append(np.array(tem))
-        tem = []
-        for i in defination.OBSERVATION_WATERTANK:
-            tem.append(observations[i])
-        format_obs.append(np.array(tem))
-        tem = []
-        for i in defination.OBSERVATION_CHP:
-            tem.append(observations[i])
-        format_obs.append(np.array(tem))
-        tem = []
-        for i in defination.OBSERVATION_BOILER:
-            tem.append(observations[i])
-        format_obs.append(np.array(tem))
+        for n in names:
+            if n.find("battery") != -1:
+                tem = [observations[i] for i in defination.OBSERVATION_BATTERY(n)]
+            elif n.find("watertank") != -1:
+                tem = [observations[i] for i in defination.OBSERVATION_WATERTANK(n)]
+            elif n.find("chp") != -1:
+                tem = [observations[i] for i in defination.OBSERVATION_CHP(n)]
+            elif n.find("boiler") != -1:
+                tem = [observations[i] for i in defination.OBSERVATION_BOILER(n)]
+            format_obs.append(np.array(tem))
         format_obs = np.array([format_obs], dtype = object)
 
-        format_action = []
-        for ag in defination.AGENT_NAME:
-            format_action.append(actions[ag][np.newaxis,:])
-
-        format_reward = []
-        for ag in defination.AGENT_NAME:
-            format_reward.append(rewards)
-        format_reward = np.array(format_reward)[np.newaxis,:]
-
         format_next_obs = []
-        tem = []
-        for i in defination.OBSERVATION_BATTERY:
-            tem.append(next_observations[i])
-        format_next_obs.append(np.array(tem))
-        tem = []
-        for i in defination.OBSERVATION_WATERTANK:
-            tem.append(next_observations[i])
-        format_next_obs.append(np.array(tem))
-        tem = []
-        for i in defination.OBSERVATION_CHP:
-            tem.append(next_observations[i])
-        format_next_obs.append(np.array(tem))
-        tem = []
-        for i in defination.OBSERVATION_BOILER:
-            tem.append(next_observations[i])
-        format_next_obs.append(np.array(tem))
+        for n in names:
+            if n.find("battery") != -1:
+                tem = [next_observations[i] for i in defination.OBSERVATION_BATTERY(n)]
+            elif n.find("watertank") != -1:
+                tem = [next_observations[i] for i in defination.OBSERVATION_WATERTANK(n)]
+            elif n.find("chp") != -1:
+                tem = [next_observations[i] for i in defination.OBSERVATION_CHP(n)]
+            elif n.find("boiler") != -1:
+                tem = [next_observations[i] for i in defination.OBSERVATION_BOILER(n)]
+            format_next_obs.append(np.array(tem))
         format_next_obs = np.array([format_next_obs], dtype = object)
-        
-        format_done = []
-        for ag in defination.AGENT_NAME:
-            format_done.append(dones)
-        format_done = np.array(format_done)[np.newaxis,:]
-
+  
+        format_action = [actions[ag][np.newaxis,:] for ag in names]
+        format_reward = np.array([rewards for ag in names])[np.newaxis,:]      
+        format_done = np.array([dones for ag in names])[np.newaxis,:]
         self.pointer += 1
 
         return super().push(format_obs, format_action, format_reward, format_next_obs, format_done)

@@ -38,8 +38,8 @@ OBSERVATION = np.array([
                 "_heat_generate"  #boiler
                 ])
 AGENT = ["Battery", "WaterTank", "CHP", "Boiler", "User", "SolarPanel"]
-AGENT_NAME = ["battery1", "watertank1", "chp1", "boiler1","battery2", "watertank2", "chp2", "boiler2"]
-
+# AGENT_NAME = ["battery1", "watertank1", "chp1", "boiler1","battery2", "watertank2", "chp2", "boiler2"]
+AGENT_NAME = None
 obs_battery = [0,2,5]
 obs_watertank = [4,6]
 obs_chp = [0,1,2,4]

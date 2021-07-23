@@ -31,6 +31,7 @@ def normal_discrete(mean, var, action_space, low, high):
 def main():
     # Log = Mylogger("MAAC_scale_data")
     env = Env.Multiagent_energy(id_num=1)
+    names = env.get_agent_names()
     model = Actor_Attention_Critic.init_from_env(env, q_lr=0.0001, critic_hidden_dim = 256, pol_hidden_dim= 256)
     replay_buffer = myBuffer(buffer_length, model.nagents,
                                  [obsp for obsp in env.observation_space.values()],
@@ -64,7 +65,7 @@ def main():
                 a[key] = normal_discrete(value, var, action_space_list, a_low_bounds[key], a_bounds[key])
             s_, r, done, info = env.step(a)
             ep_r += r
-            replay_buffer.push(s, a, ep_r , s_, done) # store the transition to memory
+            replay_buffer.push(s, a, ep_r , s_, done,names) # store the transition to memory
 
             if replay_buffer.pointer > buffer.MEMORY_CAPACITY:
                 var *= 0.9995

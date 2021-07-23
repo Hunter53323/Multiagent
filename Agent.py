@@ -306,7 +306,6 @@ class User(BaseAgent):
 
     def reset(self):
         self.process = 0
-        return self.generate_demand_fixed(0)
         # return self.generate_demand()
 
 class SolarPanel(BaseAgent):

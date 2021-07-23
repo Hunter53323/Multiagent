@@ -123,7 +123,7 @@ class Multiagent_energy(gym.Env):
         self.current_time_period += 1
         done = bool(
             self.current_time_period >= 24
-            # or punish < -5000 #done的新步骤
+            or punish < -5000 #done的新步骤
         )
         punish = max(punish, -100)  #惩罚限制
         # satisfaction = 20
@@ -150,7 +150,6 @@ class Multiagent_energy(gym.Env):
         self.save(merge(render_list, self.observation, cost_and_earning_dict))
 
         return self.observation, reward, done, {}
-        # return self.observation, reward, done, render_list
     
     # def _getdemand(self, ctime):
           #分离需求
@@ -189,12 +188,15 @@ class Multiagent_energy(gym.Env):
         self.current_time_period = 0
         self.not_done = True
         self.save_dict = {}
-        #当前价格：2
-        self.observation = self._get_current_price(self.current_time_period)        
-        
+        for u in self.users:
+            u.reset()
+
+        #当前价格：2 需求：3
+        self.observation = merge(self._get_current_price(self.current_time_period),self._getdemand(self.current_time_period))  
+              
         for i in range(self.id_num):
-            #需求：3 电池：1 热电联产：2 锅炉：1
-            self.observation = merge(self.observation,self.users[i].reset(),self.agents[4*i].reset(),self.agents[4*i+1].reset(),self.agents[4*i+2].reset(),self.agents[4*i+3].reset())
+            # 电池：1 热电联产：2 锅炉：1
+            self.observation = merge(self.observation,self.agents[4*i].reset(),self.agents[4*i+1].reset(),self.agents[4*i+2].reset(),self.agents[4*i+3].reset())
 
         self.save(self.observation)
         return self.observation
