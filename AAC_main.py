@@ -12,7 +12,7 @@ from logger import Mylogger
 #buffer储存的时候优先存储reward更高的动作，进而进行学习
 EP_STEPS = 24
 RENDER = False
-BATCH_SIZE = 512#TODO:修正batch size
+BATCH_SIZE = 512
 useGPU = True
 
 buffer_length = int(1e6)
@@ -29,9 +29,8 @@ def normal_discrete(mean, var, action_space, low, high):
     action_list[random_action] = 1
     return action_list
 def main():
-    Log = Mylogger("MAAC_data_no_attention")
-    # Log = Mylogger("MAAC_data")
-    env = Env.Multiagent_energy()
+    # Log = Mylogger("MAAC_scale_data")
+    env = Env.Multiagent_energy(id_num=1)
     model = Actor_Attention_Critic.init_from_env(env, q_lr=0.0001, critic_hidden_dim = 256, pol_hidden_dim= 256)
     replay_buffer = myBuffer(buffer_length, model.nagents,
                                  [obsp for obsp in env.observation_space.values()],
@@ -42,14 +41,15 @@ def main():
 
     t1 = time.time()
     print("start simulation!")
+
+    #初始化的参数设置
     EPISODES = 3000 #初始找到之后的循环次数
     max_reward = -100000
     best_actions = {}
-    total_cost = 0
-    total_earning = 0
+    total_cost,total_earning = 0,0
     rewards = []
-    var = 5
-    i = 0
+    var,i = 5,0
+
     while i < EPISODES:
         s = env.reset()
         ep_r = 0
@@ -70,7 +70,8 @@ def main():
                 var *= 0.9995
                 # model.prep_training(device='gpu')
                 sample = replay_buffer.sample(BATCH_SIZE, to_gpu=useGPU)
-                model.learn(sample, logger=Log.logger, device = 'gpu')
+                # model.learn(sample, logger=Log.logger, device = 'gpu')
+                model.learn(sample, logger=None, device = 'gpu')
                 model.prep_rollouts(device='gpu')
             # ep_rews = replay_buffer.get_average_rewards(EP_STEPS)
             s = s_
@@ -81,7 +82,7 @@ def main():
                 print('Episode: ', i, ' Reward: %i' % (ep_r))
                 # if ep_r > 0:
                 #     Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
-                Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
+                # Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
                 if ep_r > max_reward:
                     best_actions = env.get_save()
                     max_reward = ep_r
@@ -94,7 +95,7 @@ def main():
             if done:
                 # if ep_r > 0:
                 #     Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
-                Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
+                # Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
                 print("errorEpisode: ", i, ' Reward: %i' % (ep_r))
                 break
         i += 1

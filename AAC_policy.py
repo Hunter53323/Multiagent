@@ -64,31 +64,30 @@ class Actor_Attention_Critic(object):
         #variables进行不同的线程之间的堆叠，目前暂时不用实现
         actions = {}
         for a in self.agents:
-            if a.name == "battery":
-                sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_BATTERY])
+            if a.name.find("battery") != -1:
+                sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_BATTERY(a.name)])
                 sub_obs = Variable(torch.Tensor(sub_obs), requires_grad=False)
                 sub_obs = torch.unsqueeze(sub_obs,0)
-                actions['battery'] = a.step(sub_obs, explore = explore, to_gpu = to_gpu).data.cpu().numpy()
-            elif a.name == "watertank":
-                sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_WATERTANK])
+                actions[a.name] = a.step(sub_obs, explore = explore, to_gpu = to_gpu).data.cpu().numpy()
+            elif a.name.find("watertank") != -1:
+                sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_WATERTANK(a.name)])
                 sub_obs = Variable(torch.Tensor(sub_obs),requires_grad = False)
                 sub_obs = torch.unsqueeze(sub_obs,0)
-                actions['watertank'] = a.step(sub_obs, explore = explore, to_gpu = to_gpu).data.cpu().numpy()
-            elif a.name == "chp":
-                sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_CHP])
+                actions[a.name] = a.step(sub_obs, explore = explore, to_gpu = to_gpu).data.cpu().numpy()
+            elif a.name.find("chp") != -1:
+                sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_CHP(a.name)])
                 sub_obs = Variable(torch.Tensor(sub_obs),requires_grad = False)
                 sub_obs = torch.unsqueeze(sub_obs,0)
-                actions['chp'] = a.step(sub_obs, explore = explore, to_gpu = to_gpu).data.cpu().numpy()
-            elif a.name == "boiler":
-                sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_BOILER])
+                actions[a.name] = a.step(sub_obs, explore = explore, to_gpu = to_gpu).data.cpu().numpy()
+            elif a.name.find("boiler") != -1:
+                sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_BOILER(a.name)])
                 sub_obs = Variable(torch.Tensor(sub_obs),requires_grad = False)
                 sub_obs = torch.unsqueeze(sub_obs,0)
-                actions['boiler'] = a.step(sub_obs, explore = explore, to_gpu = to_gpu).data.cpu().numpy()
+                actions[a.name] = a.step(sub_obs, explore = explore, to_gpu = to_gpu).data.cpu().numpy()
             else:
                 raise Exception("请检查智能体名称！")
 
-        return actions  #理论上这个action可以直接step了
-        #return [a.step(obs, explore=explore) for a, obs in zip(self.agents,observations)]
+        return actions
 
     def update_critic(self, sample, soft=True, logger=None, **kwargs):
         """
@@ -113,13 +112,13 @@ class Actor_Attention_Critic(object):
             target_q = (rews[a_i].view(-1, 1) +
                         self.gamma * nq *
                         (1 - dones[a_i].view(-1, 1)))
-            # if soft:
-            #     target_q -= log_pi / self.reward_scale
+            if soft:
+                target_q -= log_pi / self.reward_scale
             q_loss += MSELoss(pq, target_q.detach())
-            # for reg in regs:
-            #     q_loss += reg  # regularizing attention
+            for reg in regs:
+                q_loss += reg  # regularizing attention
         q_loss.backward()
-        # self.critic.scale_shared_grads()   
+        self.critic.scale_shared_grads()   
         grad_norm = torch.nn.utils.clip_grad_norm_(
             self.critic.parameters(), 10 * self.nagents)
         self.critic_optimizer.step()

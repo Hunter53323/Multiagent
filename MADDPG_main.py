@@ -13,7 +13,7 @@ import matplotlib as plt
 #buffer储存的时候优先存储reward更高的动作，进而进行学习
 EP_STEPS = 24
 RENDER = False
-BATCH_SIZE = 512#TODO:修正batch size
+BATCH_SIZE = 512
 useGPU = True
 
 buffer_length = int(1e6)

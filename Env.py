@@ -152,10 +152,27 @@ class Multiagent_energy(gym.Env):
         return self.observation, reward, done, {}
         # return self.observation, reward, done, render_list
     
+    # def _getdemand(self, ctime):
+          #分离需求
+    #     demand = {}
+    #     for i in range(self.id_num):
+    #         demand = merge(demand,self.users[i].generate_demand_fixed(ctime)) 
+    #     return demand
+
     def _getdemand(self, ctime):
-        demand = {}
+        #整合需求
+        demand = {"heat_demand":0,"gas_demand":0,"electricity_demand":0}
         for i in range(self.id_num):
-            demand = merge(demand,self.users[i].generate_demand_fixed(ctime)) 
+            cdemand = self.users[i].generate_demand_fixed(ctime)
+            for key, value in cdemand.items():
+                if key.find("heat") != -1:
+                    demand["heat_demand"] += value
+                elif key.find("gas") != -1:
+                    demand["gas_demand"] += value
+                elif key.find("electricity") != -1:
+                    demand["electricity_demand"] += value
+                else:
+                    raise AssertionError("检查需求！")
         return demand
 
     def calculate_reward(self, cost, satisfactory, earnings, punish):

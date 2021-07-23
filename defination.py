@@ -20,9 +20,22 @@ OBSERVATION = np.array([
                 'heat_demand',
                 'battery_electricity',
                 'watertank_heat',
-                "CHP_electricity_generate",
-                "CHP_heat_generate",
+                "chp_electricity_generate",
+                "chp_heat_generate",
                 "boiler_heat_generate"
+                ])
+
+OBSERVATION = np.array([ 
+                'current_electricity_price', 
+                'current_gas_price',
+                'electricity_demand',
+                'gas_demand',
+                'heat_demand',
+                '_electricity',  #battery
+                '_heat',   #watertank
+                "_electricity_generate", #chp
+                "_heat_generate", #chp
+                "_heat_generate"  #boiler
                 ])
 AGENT = ["Battery", "WaterTank", "CHP", "Boiler", "User", "SolarPanel"]
 AGENT_NAME = ["battery1", "watertank1", "chp1", "boiler1","battery2", "watertank2", "chp2", "boiler2"]
@@ -36,6 +49,22 @@ OBSERVATION_BATTERY = OBSERVATION[obs_battery]
 OBSERVATION_WATERTANK = OBSERVATION[obs_watertank]
 OBSERVATION_CHP = OBSERVATION[obs_chp]
 OBSERVATION_BOILER = OBSERVATION[obs_boiler]
+
+def OBSERVATION_BATTERY(name):
+    result = OBSERVATION[obs_battery]
+    result[-1] = name + result[-1]
+    return result
+
+def OBSERVATION_WATERTANK(name):
+    result = OBSERVATION[obs_watertank]
+    result[-1] = name + result[-1]
+    return result
+
+def OBSERVATION_CHP(name):
+    return OBSERVATION[obs_chp]
+
+def OBSERVATION_BOILER(name): 
+    return OBSERVATION[obs_boiler]
 
 def dict_to_list(dic):
     return np.array([value for value in dic.values()])

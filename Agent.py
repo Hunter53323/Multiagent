@@ -286,8 +286,8 @@ class User(BaseAgent):
             self.heat_demand = 0
             self.elec_demand = 0
             self.gas_damand = 0
-        demand[self.name+'_ electricity_demand'] = self.electricity_demand
-        demand[self.name+'_ gas_demand'] = self.gas_demand
+        demand[self.name+'_electricity_demand'] = self.electricity_demand
+        demand[self.name+'_gas_demand'] = self.gas_demand
         demand[self.name+'_heat_demand'] = self.heat_demand
         return demand
 
