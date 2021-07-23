@@ -65,7 +65,7 @@ def main():
                 a[key] = normal_discrete(value, var, action_space_list, a_low_bounds[key], a_bounds[key])
             s_, r, done, info = env.step(a)
             ep_r += r
-            replay_buffer.push(s, a, ep_r , s_, done,names) # store the transition to memory
+            replay_buffer.push(s, a, r , s_, done, names) # store the transition to memory
 
             if replay_buffer.pointer > buffer.MEMORY_CAPACITY:
                 var *= 0.9995
@@ -80,6 +80,7 @@ def main():
             if j == EP_STEPS - 1:
                 if (EPISODES == 3000) and (replay_buffer.pointer > buffer.MEMORY_CAPACITY):
                     EPISODES += i
+                    # EPISODES = i + 200
                 print('Episode: ', i, ' Reward: %i' % (ep_r))
                 # if ep_r > 0:
                 #     Log.logger.add_scalar("mean_episode_rewards", ep_r, i)

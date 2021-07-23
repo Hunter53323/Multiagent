@@ -45,9 +45,9 @@ class Multiagent_energy(gym.Env):
         self.id_num = id_num
 
         #常量定义
-        self.earning_factor = 1#原来是5 5 10
-        self.cost_factor = 1
-        self.satisfactory_factor = 2
+        self.earning_factor = 5#原来是5 5 10
+        self.cost_factor = 5
+        self.satisfactory_factor = 10
 
         self.save_dict = {}
         
