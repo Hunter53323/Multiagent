@@ -64,7 +64,7 @@ def main():
                 a[key] = normal_discrete(value, var, action_space_list, a_low_bounds[key], a_bounds[key])
             s_, r, done, info = env.step(a)
             ep_r += r
-            replay_buffer.push(s, a, ep_r , s_, done) # store the transition to memory
+            replay_buffer.push(s, a, r , s_, done) # store the transition to memory
 
             if replay_buffer.pointer > buffer.MEMORY_CAPACITY:
                 var *= 0.9995
