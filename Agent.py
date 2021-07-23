@@ -28,8 +28,8 @@ class BaseAgent():
         raise NotImplementedError()
 
 class Battery(BaseAgent):
-    def __init__(self):
-        super().__init__(name = "battery")
+    def __init__(self, id = 1):
+        super().__init__(name = "battery"+str(id))
         self.init_elec = 2
         self.electricity = self.init_elec
         # self.electricity = 2 #DDPG电池初始电量给低
@@ -90,14 +90,14 @@ class Battery(BaseAgent):
         elif reward < 0 and charge_number == 0:
             sell_number = round(old_elec,2)
 
-        battery_electricity = {'battery_electricity':self.electricity}
+        battery_electricity = {self.name+'_electricity':self.electricity}
         return battery_electricity, charge_number, reward, sell_number
 
 
     def reset(self):
         self.electricity = self.init_elec
 
-        battery_electricity = {'battery_electricity':self.electricity}
+        battery_electricity = {self.name+'_electricity':self.electricity}
         return battery_electricity
 
     def _get_charge_number(self, action):
@@ -111,11 +111,11 @@ class Battery(BaseAgent):
 
     def get_other_electricity(self, elec):
         if elec > self.charge_discharge_max:
-            return {'battery_electricity':self.electricity + elec}, -10000
+            return {self.name+'_electricity':self.electricity + elec}, -10000
         # self.electricity = round(self.electricity + elec - 0.1, 2)
         self.electricity = round(self.electricity + elec, 2)
         reward = self._judge_constraint()
-        battery_electricity = {'battery_electricity':self.electricity}
+        battery_electricity = {self.name+'_electricity':self.electricity}
         return battery_electricity, reward
 
     def render(self):
@@ -123,8 +123,8 @@ class Battery(BaseAgent):
         pass
 
 class WaterTank(BaseAgent):#TODO:电池的买卖充放分成两个动作
-    def __init__(self):
-        super().__init__(name = "watertank")
+    def __init__(self, id = 1):
+        super().__init__(name = "watertank" + str(id))
         self.heat = 3
 
         #动作空间为放热从0-1
@@ -140,11 +140,11 @@ class WaterTank(BaseAgent):#TODO:电池的买卖充放分成两个动作
     def get_other_heat(self, heat_output):
         #输入其他智能体的热量
         if heat_output > self.heat_get_release_max:
-            return {'watertank_heat': self.heat + heat_output}, -10000
+            return {self.name+'_heat': self.heat + heat_output}, -10000
         # self.heat = round(self.heat + heat_output - 0.1, 2)
         self.heat = round(self.heat + heat_output, 2)
         reward = self._judge_constraint()
-        watertank_heat = {'watertank_heat': self.heat}
+        watertank_heat = {self.name+'_heat': self.heat}
         return watertank_heat, reward
 
     def _judge_constraint(self):
@@ -168,17 +168,17 @@ class WaterTank(BaseAgent):#TODO:电池的买卖充放分成两个动作
         # if reward < 0:
         #     release_number = self.heat + release_number
 
-        watertank_heat = {'watertank_heat': self.heat}
+        watertank_heat = {self.name+'_heat': self.heat}
         return watertank_heat, release_number, reward
 
     def reset(self):
         self.heat = 3.0
-        watertank_heat = {'watertank_heat': self.heat}
+        watertank_heat = {self.name+'_heat': self.heat}
         return watertank_heat
 
 class CHP(BaseAgent):
-    def __init__(self):
-        super().__init__(name = "chp")
+    def __init__(self, id = 1):
+        super().__init__(name = "chp" + str(id))
         
         #动作空间为c产生量从0-4
         self.action_space = spaces.Discrete(41)
@@ -198,13 +198,13 @@ class CHP(BaseAgent):
         gas_consumption = round(action / (10.0*self.generate_ratio), 2)
         # electricity_generate, heat_generate = self._generate_heat_and_electricity(gas_consumption)
 
-        CHP_observation = {"CHP_electricity_generate": electricity_generate, "CHP_heat_generate": heat_generate}
+        CHP_observation = {self.name+"_electricity_generate": electricity_generate, self.name+"_heat_generate": heat_generate}
         reward = 0
         return CHP_observation, gas_consumption, reward 
  
 
     def reset(self):
-        CHP_observation = {"CHP_electricity_generate": 0, "CHP_heat_generate": 0}
+        CHP_observation = {self.name+"_electricity_generate": 0, self.name+"_heat_generate": 0}
         return CHP_observation
         
 
@@ -212,8 +212,8 @@ class CHP(BaseAgent):
         return round(self.generate_ratio*gas,1), round(self.generate_ratio*gas,1)
 
 class Boiler(BaseAgent):#TODO:锅炉的参数确定
-    def __init__(self):
-        super().__init__(name="boiler")
+    def __init__(self, id = 1):
+        super().__init__(name="boiler" + str(id))
         
         #产热从0-1
         self.action_space = spaces.Discrete(41)
@@ -231,12 +231,12 @@ class Boiler(BaseAgent):#TODO:锅炉的参数确定
         gas_consumption = round(action / 10.0,2)
         heat_generate = round(self._generate_heat(gas_consumption),2)
 
-        Boiler_observation = {"boiler_heat_generate": heat_generate}
+        Boiler_observation = {self.name+"_heat_generate": heat_generate}
         reward = 0
         return Boiler_observation, gas_consumption, reward 
 
     def reset(self):
-        Boiler_observation = {"boiler_heat_generate": 0}
+        Boiler_observation = {self.name+"_heat_generate": 0}
         return Boiler_observation
 
     def _generate_heat(self, gas):
@@ -244,8 +244,8 @@ class Boiler(BaseAgent):#TODO:锅炉的参数确定
         # return 0.8*gas
         return gas
 class User(BaseAgent):
-    def __init__(self, mode = "test"):
-        super().__init__(name = "user")
+    def __init__(self, mode = "test", id = 1):
+        super().__init__(name = "user" + str(id))
         self.satisfaction = None
         self.electricity_demand = None
         self.gas_demand = None
@@ -286,30 +286,10 @@ class User(BaseAgent):
             self.heat_demand = 0
             self.elec_demand = 0
             self.gas_damand = 0
-        demand['electricity_demand'] = self.electricity_demand
-        demand['gas_demand'] = self.gas_demand
-        demand['heat_demand'] = self.heat_demand
+        demand[self.name+'_ electricity_demand'] = self.electricity_demand
+        demand[self.name+'_ gas_demand'] = self.gas_demand
+        demand[self.name+'_heat_demand'] = self.heat_demand
         return demand
-
-    def generate_demand(self):
-        assert self.process == 0, "请先将上一步的生成需求进行满意度评判"
-        self.process = 1
-
-        self.electricity_demand = self.random_demand(self.electricity_demand_max)
-        # self.gas_demand = random_demand(self.gas_demand_max)
-        self.gas_demand = 0
-        self.heat_demand = self.random_demand(self.heat_demand_max)
-        if self.run_mode == "test":
-            self.gas_demand = 0
-            self.heat_demand = 0
-            self.electricity_demand = random.choice([self.electricity_demand,0])
-        demand = {}
-        demand['electricity_demand'] = self.electricity_demand
-        demand['gas_demand'] = self.gas_demand
-        demand['heat_demand'] = self.heat_demand
-
-        return demand
-        #return self.electricity_demand, self.gas_demand, self.heat_demand
 
     def judge_satisfaction(self, electricity_provide, heat_provide, factor):
         assert self.process == 1, "判断前需先生成需求"
@@ -330,8 +310,8 @@ class User(BaseAgent):
         # return self.generate_demand()
 
 class SolarPanel(BaseAgent):
-    def __init__(self):
-        super().__init__(name = "solarpanel")
+    def __init__(self, id =1):
+        super().__init__(name = "solarpanel" + str(id))
         self.soalr_generate = [0, 0, 0, 0, 0, 0.4, 0.9, 1.2, 1.4, 1.5, 1.5, 1.5, 1.5, 1.4, 1.3, 1.3, 1.1, 0.7, 0.2, 0, 0, 0, 0, 0]
 
     def generate(self, time):
@@ -348,11 +328,11 @@ class SolarPanel(BaseAgent):
         if time < 5 or time > 19:
             return 0.0
         generate_elec = round(7 - abs(time - 12), 2)
-        generate_elec_obs = {"solarpanel_generate_electricity":generate_elec}
+        generate_elec_obs = {self.name+"_generate_electricity":generate_elec}
         return generate_elec
 
     def reset(self):
-        generate_elec_obs = {"solarpanel_generate_electricity":0}
+        generate_elec_obs = {self.name+"_generate_electricity":0}
         return generate_elec_obs
 
 

@@ -25,7 +25,7 @@ def normal_discrete(mean, var, action_space, low, high):
 
 def main():
     ii = 400
-    EPISODES = 2000
+    EPISODES = 3000
     max_reward = -10000
     env = Env.Multiagent_energy()
     agent_names = env.get_agent_names()
