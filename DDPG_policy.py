@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import numpy as np
 import defination
 
+
 LR_ACTOR = 0.00001
 LR_CRITIC = 0.00002
 GAMMA = 0.9
@@ -68,14 +69,14 @@ class Critic(nn.Module):
         self.requires_grad_ = False
 
 class MADDPG():
-    def __init__(self, a_dims, s_dims, agents):
+    def __init__(self, env, a_dims, s_dims, agents):
         """
         param:
         a_dims:动作空间的字典，key为智能体名称，value为智能体动作空间维数
         s_dims:状态空间的字典，key为智能体名称，value为智能体状态空间维数
         """
-        s_dim_all = len(defination.OBSERVATION)
-        self.DDPGs = [DDPG(a_dims[agent], s_dims[agent], s_dim_all, agent) for agent in agents]
+        s_dim_all = env.reset()
+        self.DDPGs = [DDPG(a_dims[agent_name], s_dims[agent_name], s_dim_all, agent_name) for agent_name in agents]
         self.pointer = 0
 
     # def choose_action(self, obs):
@@ -100,18 +101,18 @@ class MADDPG():
     def choose_action(self, obs):
         actions = {}
         for agent in self.DDPGs:
-            if agent.name == "battery":
-                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION])
-                actions['battery'] = agent.choose_action(sub_obs)
-            elif agent.name == "watertank":
-                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION])
-                actions['watertank'] = agent.choose_action(sub_obs)
-            elif agent.name == "chp":
-                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION])
-                actions['chp'] = agent.choose_action(sub_obs)
-            elif agent.name == "boiler":
-                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION])
-                actions['boiler'] = agent.choose_action(sub_obs)
+            if agent.name.find("battery") != -1:
+                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION_BATTERY(agent.name)])
+                actions[agent.name] = agent.choose_action(sub_obs)
+            elif agent.name.find("watertank") != -1:
+                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION_WATERTANK(agent.name)])
+                actions[agent.name] = agent.choose_action(sub_obs)
+            elif agent.name.find("chp") != -1:
+                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION_CHP(agent.name)])
+                actions[agent.name] = agent.choose_action(sub_obs)
+            elif agent.name.find("boiler") != -1:
+                sub_obs = np.array([value for key, value in obs.items() if key in defination.OBSERVATION_BOILER(agent.name)])
+                actions[agent.name] = agent.choose_action(sub_obs)
             else:
                 raise Exception("请检查智能体名称！")
         return actions
@@ -119,15 +120,15 @@ class MADDPG():
     def store_transition(self, s_critic, a, r, s__critic):
         self.pointer += 1
         for agent in self.DDPGs:
-            if agent.name in defination.AGENT_NAME:
-                agent.store_transition(s_critic, a[agent.name], r, s__critic)
+            agent.store_transition(s_critic, a[agent.name], r, s__critic)
 
     def learn(self):
         for agent in self.DDPGs:
             agent.learn()
 
 class DDPG(object):
-    def __init__(self, a_dim, s_dim, s_dim_critic, name):
+    def __init__(self, a_dim, s_dim, obs, name):
+        s_dim_critic = len(obs)
         self.a_dim, self.s_dim, self.s_dim_critic = a_dim, s_dim, s_dim_critic
         self.memory = np.zeros((MEMORY_CAPACITY, 2*s_dim + 2*s_dim_critic + a_dim + 1), dtype=np.float32)
         self.pointer = 0 # serves as updating the memory data 
@@ -142,6 +143,7 @@ class DDPG(object):
         # Define the loss function for critic network update
         self.loss_func = nn.MSELoss()
         self.name = name
+        self.obs = obs
 
     # def _formatting(self, s_critic, s__critic):
     #     if self.name == "battery":
@@ -162,18 +164,18 @@ class DDPG(object):
     #     return s, s_
 
     def _formatting(self, s_critic, s__critic):
-        if self.name == "battery":
-            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION}
-            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION}
-        elif self.name == "watertank":
-            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION}
-            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION}
-        elif self.name == "chp":
-            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION}
-            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION}
-        elif self.name == "boiler":
-            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION}
-            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION}
+        if self.name.find("battery") != -1:
+            s = {key: value for key, value in s_critic.items() if key in self.obs.keys()}
+            s_ = {key: value for key, value in s__critic.items() if key in self.obs.keys()}
+        elif self.name.find("watertank") != -1:
+            s = {key: value for key, value in s_critic.items() if key in self.obs.keys()}
+            s_ = {key: value for key, value in s__critic.items() if key in self.obs.keys()}
+        elif self.name.find("chp") != -1:
+            s = {key: value for key, value in s_critic.items() if key in self.obs.keys()}
+            s_ = {key: value for key, value in s__critic.items() if key in self.obs.keys()}
+        elif self.name.find("boiler") != -1:
+            s = {key: value for key, value in s_critic.items() if key in self.obs.keys()}
+            s_ = {key: value for key, value in s__critic.items() if key in self.obs.keys()}
         else:
             raise Exception("请正确使用格式化函数！")
 

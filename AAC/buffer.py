@@ -115,6 +115,8 @@ class myBuffer(ReplayBuffer):
                 tem = [observations[i] for i in defination.OBSERVATION_CHP(n)]
             elif n.find("boiler") != -1:
                 tem = [observations[i] for i in defination.OBSERVATION_BOILER(n)]
+            else:
+                raise AssertionError("请检查缓存器！")
             format_obs.append(np.array(tem))
         format_obs = np.array([format_obs], dtype = object)
 
@@ -128,12 +130,14 @@ class myBuffer(ReplayBuffer):
                 tem = [next_observations[i] for i in defination.OBSERVATION_CHP(n)]
             elif n.find("boiler") != -1:
                 tem = [next_observations[i] for i in defination.OBSERVATION_BOILER(n)]
+            else:
+                raise AssertionError("请检查缓存器！")
             format_next_obs.append(np.array(tem))
         format_next_obs = np.array([format_next_obs], dtype = object)
   
         format_action = [actions[ag][np.newaxis,:] for ag in names]
-        format_reward = np.array([rewards for ag in names])[np.newaxis,:]      
-        format_done = np.array([dones for ag in names])[np.newaxis,:]
+        format_reward = np.array([rewards for _ in names])[np.newaxis,:]      
+        format_done = np.array([dones for _ in names])[np.newaxis,:]
         self.pointer += 1
 
         return super().push(format_obs, format_action, format_reward, format_next_obs, format_done)

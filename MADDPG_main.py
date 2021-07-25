@@ -31,8 +31,9 @@ def normal_discrete(mean, var, action_space, low, high):
     return action_list
 
 def main():
-    Log = Mylogger("MADDPG_data")
-    env = Env.Multiagent_energy()
+    # Log = Mylogger("MADDPG_data")
+    env = Env.Multiagent_energy(id_num=4)
+    names = env.get_agent_names()
     model = MADDPG.init_from_env(env, lr=0.001, hidden_dim=256)
     replay_buffer = myBuffer(buffer_length, model.nagents,
                                  [obsp for obsp in env.observation_space.values()],
@@ -45,7 +46,7 @@ def main():
 
     t1 = time.time()
     print("start simulation!")
-    EPISODES = 10000 #初始找到之后的循环次数
+    EPISODES = 3000 #初始找到之后的循环次数
     max_reward = -100000
     best_actions = {}
     total_cost = 0
@@ -70,14 +71,15 @@ def main():
             #     action_space_list = np.array(range(env.action_space[key]))
             #     a[key] = normal_discrete(value, var, action_space_list, a_low_bounds[key], a_bounds[key])
             s_, r, done, info = env.step(a)
-            replay_buffer.push(s, a, r , s_, done) # store the transition to memory
+            replay_buffer.push(s, a, r , s_, done,names) # store the transition to memory
 
             if replay_buffer.pointer > buffer.MEMORY_CAPACITY:
                 var *= 0.9995
                 model.prep_training(device='gpu')
                 for a_i in range(model.nagents):
                     sample = replay_buffer.sample(BATCH_SIZE, to_gpu=useGPU)
-                    model.update(sample, a_i, logger=Log.logger, actor_loss_list=a_loss, critic_loss_list=c_loss)
+                    # model.update(sample, a_i, logger=Log.logger, actor_loss_list=a_loss, critic_loss_list=c_loss)
+                    model.update(sample, a_i, logger=None, actor_loss_list=a_loss, critic_loss_list=c_loss)
                 model.update_all_targets()
                 model.prep_rollouts(device='gpu')
 
@@ -87,8 +89,8 @@ def main():
                 # if (EPISODES == 3000) and (replay_buffer.pointer > buffer.MEMORY_CAPACITY):EPISODES += i
                 if (EPISODES == 10000) and (replay_buffer.pointer > buffer.MEMORY_CAPACITY):EPISODES += i
                 print('Episode: ', i, ' Reward: %i' % (ep_r))
-                if ep_r > 0:
-                    Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
+                # if ep_r > 0:
+                #     Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
                 if ep_r > max_reward:
                     best_actions = env.get_save()
                     max_reward = ep_r
@@ -99,8 +101,8 @@ def main():
                         continue
                 break
             if done:
-                if ep_r > 0:
-                    Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
+                # if ep_r > 0:
+                #     Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
                 print("errorEpisode: ", i, ' Reward: %i' % (ep_r))
                 if ep_r > max_reward:
                     best_actions = env.get_save()

@@ -38,14 +38,14 @@ def main():
     # a_low_bound = env.action_space.low
 
     s_dims = env.observation_space
-    a_dims = {key:value for key, value in env.action_space.items()}
+    a_dims = env.action_space
     #观测空间维数的更改
-    for key in s_dims.keys():
-        s_dims[key] = len(defination.OBSERVATION)
+    # for key in s_dims.keys():
+    #     s_dims[key] = len(defination.OBSERVATION)
     a_bounds = {key:value-1 for key, value in env.action_space.items()}
     a_low_bounds = {key:0  for key, value in env.action_space.items()}
 
-    ddpg = MADDPG(a_dims, s_dims, agent_names)
+    ddpg = MADDPG(env, a_dims, s_dims, agent_names)
     var = 3#3 # the controller of exploration which will decay during training process
     t1 = time.time()
     i = 0

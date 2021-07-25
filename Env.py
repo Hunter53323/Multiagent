@@ -1,4 +1,4 @@
-"能源系统多智能体强化学习环境--单电池"
+"能源系统多智能体强化学习环境"
 
 import math
 import gym
@@ -13,9 +13,7 @@ class Multiagent_energy(gym.Env):
     def __init__(self,mode = "test", id_num = 1):
         self.run_mode = mode
         #24个时间段的电价
-        #self.electricity_price_all = [0.3,0.3,0.3,0.3,0.3,0.3,0.3,1,1,1,1,0.6,0.6,0.6,0.6,0.6,1,1,1,1,0.6,0.6,0.6,0.3]
         self.electricity_price_all = [0.3,0.3,0.3,0.3,0.3,0.3,0.3,1.0,1.0,1.0,1.0,0.6,0.6,0.6,0.6,0.6,1.0,1.0,1.0,1.0,0.6,0.6,0.6,0.3,0]
-
         self.gas_price_all = 0.3
 
         self.current_time_period = 0
@@ -29,8 +27,8 @@ class Multiagent_energy(gym.Env):
             self.agents.extend([Battery(id=i+1), WaterTank(id=i+1), CHP(id=i+1), Boiler(id=i+1)])
             self.users.append(User("human"))
             self.panels.append(SolarPanel())
-        # self.agents = [Battery(id=1), WaterTank(id=1), CHP(id=1), Boiler(id=1), Battery(id=2), WaterTank(id=2), CHP(id=2), Boiler(id=2)] 
         self.agents_name = [ag.name for ag in self.agents] 
+
         #observation为观测到的所有状态量
         self.observation = {}
         #动作空间和状态空间的定义
@@ -49,10 +47,11 @@ class Multiagent_energy(gym.Env):
         self.cost_factor = 5
         self.satisfactory_factor = 10
 
+        #用于保存和输出的参数
         self.save_dict = {}
         
     def get_agent_names(self):
-        return self.agents_name
+        return [ag.name for ag in self.agents] 
     
     def _cal_costs(self, elec, gas):
         # cost一定是负的
@@ -75,7 +74,7 @@ class Multiagent_energy(gym.Env):
     def step(self, actions):
         assert self.not_done, "24个时刻已经运行结束，请重置环境！"
         solar_generate_elec = self.generate_elec_solar(self.current_time_period)
-        
+        ####TODO：过到这里没有问题
         ###参数初始化，以备后面使用#####
         #运行参数
         battery_electricity,battery_charge_number,battery_punish, battery_sell_number = [0]*self.id_num,[0]*self.id_num,[0]*self.id_num,[0]*self.id_num
@@ -88,7 +87,8 @@ class Multiagent_energy(gym.Env):
         watertank_heat, watertank_punish = [0]*self.id_num,[0]*self.id_num
 
         for key, value in actions.items():
-            ag_id = int(key[-1])-1
+            try:ag_id = int(key[-1])-1
+            except: ag_id = 0
             if key.find("battery") != -1:
                 battery_electricity[ag_id], battery_charge_number[ag_id], battery_punish[ag_id], battery_sell_number[ag_id] = self.agents[ag_id*4].step(value)
             elif key.find("watertank") != -1:
@@ -219,7 +219,8 @@ class Multiagent_energy(gym.Env):
             else:
                 self.save_dict[key] = [round(value,2)]
 
-    def get_save(self):
+    def get_save(self, Force = False):
+        if Force: return self.save_dict
         assert not self.not_done, "环境仍在进行，请等待环境运行完成再获取！"
         return self.save_dict
 

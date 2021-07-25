@@ -18,19 +18,6 @@ OBSERVATION = np.array([
                 'electricity_demand',
                 'gas_demand',
                 'heat_demand',
-                'battery_electricity',
-                'watertank_heat',
-                "chp_electricity_generate",
-                "chp_heat_generate",
-                "boiler_heat_generate"
-                ])
-
-OBSERVATION = np.array([ 
-                'current_electricity_price', 
-                'current_gas_price',
-                'electricity_demand',
-                'gas_demand',
-                'heat_demand',
                 '_electricity',  #battery
                 '_heat',   #watertank
                 "_electricity_generate", #chp
@@ -44,11 +31,6 @@ obs_battery = [0,2,5]
 obs_watertank = [4,6]
 obs_chp = [0,1,2,4]
 obs_boiler = [1,4]
-
-OBSERVATION_BATTERY = OBSERVATION[obs_battery]
-OBSERVATION_WATERTANK = OBSERVATION[obs_watertank]
-OBSERVATION_CHP = OBSERVATION[obs_chp]
-OBSERVATION_BOILER = OBSERVATION[obs_boiler]
 
 def OBSERVATION_BATTERY(name):
     result = OBSERVATION[obs_battery]

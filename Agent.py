@@ -73,12 +73,10 @@ class Battery(BaseAgent):
     #     return battery_electricity, charge_number, reward, sell_number
 
     def step(self, action):
-        release_action = action[0]
-        #充放买卖独立出来
-
         action = np.argmax(action)
         err_msg = "%r (%s) invalid" % (action, type(action))
         assert self.action_space.contains(action), err_msg
+        
         #将动作映射成具体的充放电数据
         charge_number, sell_number = self._get_charge_number(action)
         old_elec = self.electricity
@@ -314,20 +312,10 @@ class SolarPanel(BaseAgent):
         self.soalr_generate = [0, 0, 0, 0, 0, 0.4, 0.9, 1.2, 1.4, 1.5, 1.5, 1.5, 1.5, 1.4, 1.3, 1.3, 1.1, 0.7, 0.2, 0, 0, 0, 0, 0]
 
     def generate(self, time):
-        # if time < 5 or time > 19:
-        #     return 0.0
-        # generate_elec = round(random.randint(7 - abs(time - 12), 10 - abs(time - 12))/10.0, 2)
         if time == 24: 
             generate_elec = 0
         elif time<24:
             generate_elec = self.soalr_generate[time]
-        return generate_elec
-
-    def generate_norandom(self, time):
-        if time < 5 or time > 19:
-            return 0.0
-        generate_elec = round(7 - abs(time - 12), 2)
-        generate_elec_obs = {self.name+"_generate_electricity":generate_elec}
         return generate_elec
 
     def reset(self):

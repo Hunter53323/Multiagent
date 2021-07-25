@@ -28,6 +28,7 @@ def normal_discrete(mean, var, action_space, low, high):
     action_list = np.zeros(len(action_space))
     action_list[random_action] = 1
     return action_list
+    
 def main():
     # Log = Mylogger("MAAC_scale_data")
     env = Env.Multiagent_energy(id_num=1)
@@ -39,12 +40,14 @@ def main():
 
     a_bounds = {key:value-1 for key, value in env.action_space.items()}
     a_low_bounds = {key:0  for key, value in env.action_space.items()}
+    # print(env.action_space)
+    # print(env.observation_space)
 
     t1 = time.time()
     print("start simulation!")
 
     #初始化的参数设置
-    EPISODES = 3000 #初始找到之后的循环次数
+    EPISODES = 2000 #初始找到之后的循环次数
     max_reward = -100000
     best_actions = {}
     total_cost,total_earning = 0,0
@@ -56,7 +59,6 @@ def main():
         ep_r = 0
         model.prep_rollouts(device='gpu')
         for j in range(EP_STEPS):
-            
             a = model.step(s, to_gpu=useGPU)
             for key in a.keys():
                 a[key] = a[key][0]
@@ -87,7 +89,7 @@ def main():
                 # Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
                 if ep_r > max_reward:
                     best_actions = env.get_save()
-                    max_reward = ep_r
+                    max_reward = ep_r/env.id_num
                     try:
                         total_cost = round(sum(best_actions["cost"]),2)
                         total_earning = round(sum(best_actions["earning"]),2)
@@ -100,6 +102,7 @@ def main():
                 # Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
                 print("errorEpisode: ", i, ' Reward: %i' % (ep_r))
                 break
+
         i += 1
     print('Running time: ', time.time() - t1)
     print("best_reward:", max_reward)

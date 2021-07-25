@@ -80,26 +80,26 @@ class MADDPG(object):
         """
         actions = {}
         for a in self.agents:
-            if a.name == "battery":
-                sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_BATTERY])
+            if a.name.find("battery") != -1:
+                sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_BATTERY(a.name)])
                 sub_obs = Variable(torch.Tensor(sub_obs), requires_grad=False)
                 sub_obs = torch.unsqueeze(sub_obs,0)
-                actions['battery'] = a.step(sub_obs, explore = explore, to_gpu = to_gpu).data.cpu().numpy()
-            elif a.name == "watertank":
-                sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_WATERTANK])
+                actions[a.name] = a.step(sub_obs, explore = explore, to_gpu = to_gpu).data.cpu().numpy()
+            elif a.name.find("watertank") != -1:
+                sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_WATERTANK(a.name)])
                 sub_obs = Variable(torch.Tensor(sub_obs),requires_grad = False)
                 sub_obs = torch.unsqueeze(sub_obs,0)
-                actions['watertank'] = a.step(sub_obs, explore = explore, to_gpu = to_gpu).data.cpu().numpy()
-            elif a.name == "chp":
-                sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_CHP])
+                actions[a.name] = a.step(sub_obs, explore = explore, to_gpu = to_gpu).data.cpu().numpy()
+            elif a.name.find("chp") != -1:
+                sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_CHP(a.name)])
                 sub_obs = Variable(torch.Tensor(sub_obs),requires_grad = False)
                 sub_obs = torch.unsqueeze(sub_obs,0)
-                actions['chp'] = a.step(sub_obs, explore = explore, to_gpu = to_gpu).data.cpu().numpy()
-            elif a.name == "boiler":
-                sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_BOILER])
+                actions[a.name] = a.step(sub_obs, explore = explore, to_gpu = to_gpu).data.cpu().numpy()
+            elif a.name.find("boiler") != -1:
+                sub_obs = np.array([value for key, value in observations.items() if key in defination.OBSERVATION_BOILER(a.name)])
                 sub_obs = Variable(torch.Tensor(sub_obs),requires_grad = False)
                 sub_obs = torch.unsqueeze(sub_obs,0)
-                actions['boiler'] = a.step(sub_obs, explore = explore, to_gpu = to_gpu).data.cpu().numpy()
+                actions[a.name] = a.step(sub_obs, explore = explore, to_gpu = to_gpu).data.cpu().numpy()
             else:
                 raise Exception("请检查智能体名称！")
 
