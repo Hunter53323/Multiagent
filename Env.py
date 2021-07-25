@@ -74,7 +74,6 @@ class Multiagent_energy(gym.Env):
     def step(self, actions):
         assert self.not_done, "24个时刻已经运行结束，请重置环境！"
         solar_generate_elec = self.generate_elec_solar(self.current_time_period)
-        ####TODO：过到这里没有问题
         ###参数初始化，以备后面使用#####
         #运行参数
         battery_electricity,battery_charge_number,battery_punish, battery_sell_number = [0]*self.id_num,[0]*self.id_num,[0]*self.id_num,[0]*self.id_num
@@ -87,8 +86,7 @@ class Multiagent_energy(gym.Env):
         watertank_heat, watertank_punish = [0]*self.id_num,[0]*self.id_num
 
         for key, value in actions.items():
-            try:ag_id = int(key[-1])-1
-            except: ag_id = 0
+            ag_id = int(key[-1])-1
             if key.find("battery") != -1:
                 battery_electricity[ag_id], battery_charge_number[ag_id], battery_punish[ag_id], battery_sell_number[ag_id] = self.agents[ag_id*4].step(value)
             elif key.find("watertank") != -1:
@@ -125,7 +123,7 @@ class Multiagent_energy(gym.Env):
             self.current_time_period >= 24
             or punish < -5000 #done的新步骤
         )
-        punish = max(punish, -100)  #惩罚限制
+        punish = max(punish, -200)  #惩罚限制
         # satisfaction = 20
         # #计算总体的reward
         reward = self.calculate_reward(cost_all, satisfaction_all, earnings, punish)

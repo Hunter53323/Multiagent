@@ -30,7 +30,7 @@ class BaseAgent():
 class Battery(BaseAgent):
     def __init__(self, id = 1):
         super().__init__(name = "battery"+str(id))
-        self.init_elec = 2
+        self.init_elec = 2.0
         self.electricity = self.init_elec
         # self.electricity = 2 #DDPG电池初始电量给低
         #动作空间有无动作、充放电0-1、卖电0-1
