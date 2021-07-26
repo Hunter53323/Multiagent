@@ -158,16 +158,19 @@ class Multiagent_energy(gym.Env):
 
     def _getdemand(self, ctime):
         #整合需求
-        demand = {"heat_demand":0,"gas_demand":0,"electricity_demand":0}
+        demand = {}
         for i in range(self.id_num):
             cdemand = self.users[i].generate_demand_fixed(ctime)
             for key, value in cdemand.items():
                 if key.find("heat") != -1:
-                    demand["heat_demand"] += value
+                    try:demand['heat_demand'] += value
+                    except:demand['heat_demand'] = value
                 elif key.find("gas") != -1:
-                    demand["gas_demand"] += value
+                    try:demand['gas_demand'] += value
+                    except:demand['gas_demand'] = value
                 elif key.find("electricity") != -1:
-                    demand["electricity_demand"] += value
+                    try:demand['electricity_demand'] += value
+                    except:demand['electricity_demand'] = value
                 else:
                     raise AssertionError("检查需求！")
         return demand

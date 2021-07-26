@@ -31,9 +31,9 @@ def normal_discrete(mean, var, action_space, low, high):
     
 def main():
     # Log = Mylogger("MAAC_scale_data")
-    env = Env.Multiagent_energy(id_num=1)
+    env = Env.Multiagent_energy(id_num=3)
     names = env.get_agent_names()
-    model = Actor_Attention_Critic.init_from_env(env, q_lr=0.0001, critic_hidden_dim = 256, pol_hidden_dim= 256)
+    model = Actor_Attention_Critic.init_from_env(env, q_lr=0.0001, critic_hidden_dim = 512, pol_hidden_dim= 256)
     replay_buffer = myBuffer(buffer_length, model.nagents,
                                  [obsp for obsp in env.observation_space.values()],
                                  [acsp for acsp in env.action_space.values()])
