@@ -157,7 +157,7 @@ class Multiagent_energy(gym.Env):
     #     return demand
 
     def _getdemand(self, ctime):
-        #整合需求
+        #整合需求  #TODO：查找清楚为什么会出现这个情况
         demand = {}
         for i in range(self.id_num):
             cdemand = self.users[i].generate_demand_fixed(ctime)
