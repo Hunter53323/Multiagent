@@ -256,7 +256,8 @@ class User(BaseAgent):
         elec1 = [1.5, 1.4, 1.4, 1.3, 1.3, 1.4, 1.5, 1.6, 1.6, 1.7, 1.7, 1.7, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.7, 1.5]
         elec2 = [1.4, 1.3, 1.3, 1.3, 1.3, 1.4, 1.5, 1.6, 1.6, 1.7, 1.7, 1.8, 1.9, 2.0, 2.1, 2.1, 2.1, 2.1, 2.1, 2.0, 2.0, 1.9, 1.8, 1.6]
         elec3 = [1.5, 1.4, 1.4, 1.3, 1.3, 1.3, 1.3, 1.4, 1.5, 1.6, 1.8, 1.9, 2.0, 2.1, 2.1, 2.2, 2.2, 2.2, 2.2, 2.1, 2.0, 2.0, 1.8, 1.7]
-        self.elec_demand_fixed = [i+j+k for i,j,k in zip(elec1, elec2, elec3)]
+        # self.elec_demand_fixed = [i+j+k for i,j,k in zip(elec1, elec2, elec3)]
+        self.elec_demand_fixed = [i+j+k for i,j,k in zip(elec1, elec1, elec1)]
         # self.elec_demand_fixed = [round(i+j,2) for i,j in zip(elec1, elec2)]
         self.heat_demand_fixed = [round(0.5*i,1) for i in self.elec_demand_fixed]
 

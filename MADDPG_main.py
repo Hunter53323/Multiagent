@@ -6,7 +6,7 @@ from MADDPG_policy import MADDPG
 import time
 import numpy as np
 from logger import Mylogger
-import matplotlib as plt
+import matplotlib.pyplot as plt
 
 # EPISODES = 1000
 
@@ -32,7 +32,7 @@ def normal_discrete(mean, var, action_space, low, high):
 
 def main():
     # Log = Mylogger("MADDPG_data")
-    env = Env.Multiagent_energy(id_num=4)
+    env = Env.Multiagent_energy(id_num=1)
     names = env.get_agent_names()
     model = MADDPG.init_from_env(env, lr=0.001, hidden_dim=256)
     replay_buffer = myBuffer(buffer_length, model.nagents,
@@ -46,7 +46,7 @@ def main():
 
     t1 = time.time()
     print("start simulation!")
-    EPISODES = 3000 #初始找到之后的循环次数
+    EPISODES = 5000 #初始找到之后的循环次数
     max_reward = -100000
     best_actions = {}
     total_cost = 0
@@ -88,12 +88,12 @@ def main():
             if j == EP_STEPS - 1:
                 # if (EPISODES == 3000) and (replay_buffer.pointer > buffer.MEMORY_CAPACITY):EPISODES += i
                 if (EPISODES == 10000) and (replay_buffer.pointer > buffer.MEMORY_CAPACITY):EPISODES += i
-                print('Episode: ', i, ' Reward: %i' % (ep_r))
+                print('Episode: ', i, ' Reward: %i' % (ep_r/env.id_num))
                 # if ep_r > 0:
                 #     Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
-                if ep_r > max_reward:
+                if ep_r/env.id_num > max_reward:
                     best_actions = env.get_save()
-                    max_reward = ep_r
+                    max_reward = ep_r/env.id_num
                     try:
                         total_cost = round(sum(best_actions["cost"]),2)
                         total_earning = round(sum(best_actions["earning"]),2)

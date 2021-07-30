@@ -118,7 +118,7 @@ class Actor_Attention_Critic(object):
             for reg in regs:
                 q_loss += reg  # regularizing attention
         q_loss.backward()
-        self.critic.scale_shared_grads()   
+        self.critic.scale_shared_grads()
         grad_norm = torch.nn.utils.clip_grad_norm_(
             self.critic.parameters(), 10 * self.nagents)
         self.critic_optimizer.step()

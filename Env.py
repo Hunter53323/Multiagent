@@ -43,9 +43,9 @@ class Multiagent_energy(gym.Env):
         self.id_num = id_num
 
         #常量定义
-        self.earning_factor = 5#原来是5 5 10
-        self.cost_factor = 5
-        self.satisfactory_factor = 10
+        self.earning_factor = 1
+        self.cost_factor = 1
+        self.satisfactory_factor = 2
 
         #用于保存和输出的参数
         self.save_dict = {}
@@ -113,7 +113,7 @@ class Multiagent_energy(gym.Env):
         earnings = 0
         satisfaction_all = sum(satisfaction)
         for i in range(self.id_num):
-            cost_all += self._cal_costs(max(0,battery_charge_number[i]) + less_elec[i], chp_gas_consumption[i] + boiler_gas_consumption[i] + less_heat[i])
+            cost_all += self._cal_costs(max(0,battery_charge_number[i]) + less_elec[i], chp_gas_consumption[i] + boiler_gas_consumption[i] + less_heat[i])  #缺少的热量需要以很贵的价格购买
             punish += self._cal_punish(battery_punish[i], watertank_punish[i], chp_punish[i], boiler_punish[i])
             earnings += self._cal_earning(battery_sell_number[i])
         

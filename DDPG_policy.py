@@ -165,17 +165,17 @@ class DDPG(object):
 
     def _formatting(self, s_critic, s__critic):
         if self.name.find("battery") != -1:
-            s = {key: value for key, value in s_critic.items() if key in self.obs.keys()}
-            s_ = {key: value for key, value in s__critic.items() if key in self.obs.keys()}
+            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION_BATTERY(self.name)}
+            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION_BATTERY(self.name)}
         elif self.name.find("watertank") != -1:
-            s = {key: value for key, value in s_critic.items() if key in self.obs.keys()}
-            s_ = {key: value for key, value in s__critic.items() if key in self.obs.keys()}
+            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION_WATERTANK(self.name)}
+            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION_WATERTANK(self.name)}
         elif self.name.find("chp") != -1:
-            s = {key: value for key, value in s_critic.items() if key in self.obs.keys()}
-            s_ = {key: value for key, value in s__critic.items() if key in self.obs.keys()}
+            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION_CHP(self.name)}
+            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION_CHP(self.name)}
         elif self.name.find("boiler") != -1:
-            s = {key: value for key, value in s_critic.items() if key in self.obs.keys()}
-            s_ = {key: value for key, value in s__critic.items() if key in self.obs.keys()}
+            s = {key: value for key, value in s_critic.items() if key in defination.OBSERVATION_BOILER(self.name)}
+            s_ = {key: value for key, value in s__critic.items() if key in defination.OBSERVATION_BOILER(self.name)}
         else:
             raise Exception("请正确使用格式化函数！")
 

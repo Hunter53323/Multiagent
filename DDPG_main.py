@@ -26,8 +26,8 @@ def normal_discrete(mean, var, action_space, low, high):
 def main():
     ii = 400
     EPISODES = 3000
-    max_reward = -10000
-    env = Env.Multiagent_energy()
+    max_reward = -3000
+    env = Env.Multiagent_energy(id_num = 1)
     agent_names = env.get_agent_names()
     Log = Mylogger("DDPG_data")
     best_actions = {}
@@ -75,21 +75,21 @@ def main():
                 
                 #if RENDER and i>350 : env.render()
                 if EPISODES == 2000:EPISODES += i
-                if ep_r > max_reward:
+                if ep_r/env.id_num > max_reward:
                     best_actions = env.get_save()
-                    max_reward = ep_r
+                    max_reward = ep_r/env.id_num
                     try:
                         total_cost = round(sum(best_actions["cost"]),2)
                         total_earning = round(sum(best_actions["earning"]),2)
                     except:
                         continue
-                print('Episode: ', i, ' Reward: %i' % (ep_r), 'Explore: %.2f' % var)
-                Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
+                print('Episode: ', i, ' Reward: %i' % (ep_r*5/env.id_num), 'Explore: %.2f' % var)
+                Log.logger.add_scalar("mean_episode_rewards", ep_r*5, i)
                 #if ep_r > -300 : RENDER = True
                 break
             if done:
-                Log.logger.add_scalar("mean_episode_rewards", ep_r, i)
-                print("errorEpisode: ", i, ' Reward: %i' % (ep_r))
+                Log.logger.add_scalar("mean_episode_rewards", ep_r*5, i)
+                print("errorEpisode: ", i, ' Reward: %i' % (ep_r*5))
                 break
     print('Running time: ', time.time() - t1)
     print("best_reward:", max_reward)
