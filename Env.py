@@ -225,6 +225,12 @@ class Multiagent_energy(gym.Env):
         assert not self.not_done, "环境仍在进行，请等待环境运行完成再获取！"
         return self.save_dict
 
+    def reward_refresh():
+        pass
+
+    def lambda_refresh(lambda_old):
+        lambda_new = np.clip(lambda_old + kesi*(电池电量-最大电池电量))
+
 
 def merge(*dicts):
     """

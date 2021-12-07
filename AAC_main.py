@@ -37,7 +37,7 @@ def main():
         Log = None
     env = Env.Multiagent_energy(id_num=1)
     names = env.get_agent_names()
-    model = Actor_Attention_Critic.init_from_env(env, q_lr=0.0001, critic_hidden_dim = 256, pol_hidden_dim= 256)#, attend_heads=1)
+    model = Actor_Attention_Critic.init_from_env(env,pi_lr=0.00001, q_lr=0.0001, critic_hidden_dim = 256, pol_hidden_dim= 256)#, attend_heads=1)
     replay_buffer = myBuffer(buffer_length, model.nagents,
                                  [obsp for obsp in env.observation_space.values()],
                                  [acsp for acsp in env.action_space.values()])
@@ -70,6 +70,8 @@ def main():
                 action_space_list = np.array(range(env.action_space[key]))
                 a[key] = normal_discrete(value, var, action_space_list, a_low_bounds[key], a_bounds[key])
             s_, r, done, info = env.step(a)
+            if i < 1000:
+                r = r + i/10 -100
             ep_r += r
             replay_buffer.push(s, a, r , s_, done, names) # store the transition to memory
 
